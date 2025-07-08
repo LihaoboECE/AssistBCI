@@ -13,3 +13,12 @@ from .cbcic import CBCIC2019001, CBCIC2019004
 from .xu2018_minavep import Xu2018MinaVep
 from .cattan_P300 import Cattan_P300
 from .bids import matchingpennies
+
+'''
+added in assistbci-v2025
+author: Li Haobo
+Email: lihaoboece@gmail.com
+2025/7/8
+'''
+from .seed import SEED
+from .unlabled_eeg import unLabeled_EEG
