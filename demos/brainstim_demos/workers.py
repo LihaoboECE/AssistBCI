@@ -97,7 +97,7 @@ class ConditionWorker(ProcessWorker):
 
     def consume(self, raw_data):
 
-        if len(raw_data) > self.DEFAULT_CHANNEL_NUM + 1:
+        if np.array(raw_data).shape[-1] > self.DEFAULT_CHANNEL_NUM + 1:
             print(f"Using First {self.DEFAULT_CHANNEL_NUM} channels, "
                   f"for device more then {self.DEFAULT_CHANNEL_NUM} channels,"
                   f"please switch channels to suitable montage")

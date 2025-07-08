@@ -2,6 +2,7 @@
 import time
 from metabci.brainflow.amplifiers import Marker, NeuroDance
 from demos.brainstim_demos.workers import ConditionWorker
+from demos.brainstim_demos.sharedmemory import SharedDict
 
 '''
 A simple start up for assistBCI-v2025 worker
@@ -24,7 +25,7 @@ if __name__ == '__main__':
         srate=srate)
     marker = Marker(interval=stim_interval, srate=srate)
 
-    ns = NeuroDance(##10.8.52.19
+    ns = NeuroDance(
         device_address=('127.0.0.1', 8899),
         srate=srate,
         num_chans=8)
@@ -36,6 +37,10 @@ if __name__ == '__main__':
     input('press any key to start\n')
 
     ns.start_trans()
+
+    controller = SharedDict()
+    controller['AG_control'] = 'enable' #也可以通过sharedmemory_manageTool或开发者工具设置
+
 
     input('press any key to close\n')
     ns.down_worker('feedback_worker')
