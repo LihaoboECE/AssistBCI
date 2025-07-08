@@ -19,8 +19,6 @@ import argparse
 from metabci.brainda.algorithms.self_supervised_learning.utils import plot_embedding
 from sklearn.manifold import TSNE
 from metabci.brainda.algorithms.self_supervised_learning.GMM_distance import PCA_classifier
-
-from scipy import stats
 import pandas as pd
 from collections import defaultdict
 

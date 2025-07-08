@@ -9,30 +9,20 @@
     2025/7/3
 '''
 
-import sys
 import os
 import torch
 import numpy as np
 from metabci.brainda.datasets import SEED
 from metabci.brainda.paradigms import Emotion
-from scipy.spatial.distance import cdist
-from sklearn.decomposition import PCA
+
 from torch.utils.data import DataLoader
 from metabci.brainda.algorithms.self_supervised_learning.Base import TorchDataset
-
-from metabci.brainda.algorithms.utils.model_selection import (
-    set_random_seeds,
-    generate_kfold_indices, match_kfold_indices)
 import argparse
 from metabci.brainda.algorithms.self_supervised_learning import EmoAdapt
 from metabci.brainda.algorithms.self_supervised_learning.utils import plot_embedding
 from sklearn.manifold import TSNE
-from metabci.brainda.algorithms.self_supervised_learning.GMM import classifier
-from metabci.brainda.algorithms.self_supervised_learning.GMM_distance import PCA_classifier
 from sklearn import svm
-from scipy import stats
 import pandas as pd
-from collections import defaultdict
 
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -83,9 +73,7 @@ def get_args(file_name):
     parser.add_argument('--ckpt_path', default=os.path.join('..', 'models_buf', file_name), type=str)
     return parser.parse_args()
 
-
 dataset_path = 'E:\SEED'
-
 
 train_dataset = SEED(path=dataset_path, win_duration=5, sessions=[0])
 
@@ -93,6 +81,7 @@ paradigm = Emotion(
     srate=200,
     channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
 )
+
 
 X_train, Y_train, _ = paradigm.get_data(
     train_dataset,
@@ -130,13 +119,13 @@ print("start feature extraction")
 # 通过DataLoader节省显存, 也可以使用EmoAdapt.predict()直接预测
 train_x, train_y = torch.tensor(X_train, dtype=torch.float32), torch.tensor(Y_train, dtype=torch.long)
 train_dataset = TorchDataset(train_x, train_y)
-train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=False, drop_last=False)
+train_dataloader = DataLoader(train_dataset, batch_size=64, shuffle=True, drop_last=False)
 
 test_x, test_y = torch.tensor(X_test, dtype=torch.float32), torch.tensor(Y_test, dtype=torch.long)
 test_dataset = TorchDataset(test_x, test_y)
-test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=False, drop_last=False)
+test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True, drop_last=False)
 
-(latent_train, train_y), (latent_test, test_y) = model.get_latent(train_dataloader, disable_BN=True), model.get_latent(test_dataloader, disable_BN=True)
+(latent_train, train_y), (latent_test, test_y) = model.get_latent(train_dataloader), model.get_latent(test_dataloader, disable_BN=True)
 
 print("start T-sne")
 tsne = TSNE(n_components=2, random_state=0, init='pca', perplexity=40)
