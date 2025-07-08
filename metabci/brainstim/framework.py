@@ -227,19 +227,26 @@ class Experiment:
         self.paradigms[name] = None
         del self.paradigms[name]
 
-    def get_window(self):
+    def get_window(self, allowGUI=False):
         """If the display window does not exist, the window is created according to the initialization parameters.
 
         update log:
             2022-08-10 by Wei Zhao
 
         """
+
+        '''
+        adding allowGUI for online vidio playing in Emotion paradigm
+        Author: Li Haobo
+        Email: lihaoboece@gmail.com
+        #assistBCI-v2025 ('overlay'win-style setting is open in v2024)
+        '''
         if not self.current_win:
             self.current_win = visual.Window(
                 # the only-one option in psychopy, pygame is deprecated and glfw has lots of bugs
                 winType="pyglet",
                 units="pix",  # default pixel unit in this framework
-                allowGUI=False,
+                allowGUI=allowGUI,
                 # Here are timing related options
                 waitBlanking=False,  # much faster
                 useFBO=False,
