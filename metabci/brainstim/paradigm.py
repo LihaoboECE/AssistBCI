@@ -7,7 +7,7 @@ import os.path as op
 import string
 import numpy as np
 from math import pi
-from psychopy import data, visual, event
+from psychopy import data, visual, event, core
 from psychopy.visual.circle import Circle
 from pylsl import StreamInlet, resolve_byprop  # type: ignore
 from .utils import NeuroScanPort, NeuraclePort, _check_array_like
@@ -16,6 +16,22 @@ from copy import copy
 import random
 from scipy import signal
 from PIL import Image
+'''
+used for Emotion paradigm
+Author: Li Haobo
+Email: lihaoboece@gmail.com
+#assistBCI-v2025
+'''
+import time
+import datetime
+import tkinter as tk
+import keyboard
+import pygame
+from pathlib import Path
+vlc_path = os.path.join(Path(__file__).parent.parent.parent, "vlc")
+os.add_dll_directory(vlc_path)  # 直接使用相对路径
+import vlc
+
 
 
 # prefunctions
@@ -2332,6 +2348,362 @@ class SSAVEP(VisualStim):
         return stim
 
 
+# Emotion and physiological status paradigm
+'''
+    A fulling Customization paradigm, including:
+    1. online/ offline video stimulate
+    2. music & picture stimulate
+    3. thermal_stimulus
+    4. anxiety paradigm
+    
+    notes: online feedback is supported, 'trigger_interval' is used for controlling feedback interval
+    
+    you can customization your experiment by writing a simple log:
+    
+        emotion_params = {
+            "rating_scale_range": (0, 10), #for all
+    
+            "experiment_setup": {
+                                    "video 1": "play_mp4",
+                                    "video 2": "play_mp4",
+                                    "music 1": "play_music_and_image",
+                                    "thermal 1": "thermal_stimulus",
+                                    "anxiety 1": "anxiety_paradigm"},
+    
+            "experiment_Stimulus": {
+                                    "video 1": {
+                                        "rating": "VA", # "DP": depression or "VA": Valence-Arousal
+                                         "url": "C:\\Users\\m1358\\Desktop\\30266886520-1-192.mp4"},
+    
+                                    "video 2": {
+                                        "rating": "VA", # "DP": depression or "VA": Valence-Arousal
+                                         "url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"},
+    
+                                    "music 1": {
+                                        "music_duration": 20, "rating": ["Sadness", "Depression", "Empathy"],
+                                         "music": "12345.mp3",
+                                         "image": "R.jpg"},
+    
+                                    "thermal 1": {
+                                        "thermal_stimulus_duration": 10},
+    
+                                    "anxiety 1": {
+                                        "trial_count": 5,
+                                         "threat_images": ["01.png", "02.png"],
+                                         "neutral_images": ["03.png", "04.png"],
+                                         "alarm_sound": "wind-artificial-18750.mp3",}
+            }
+    
+        }
+    
+        emotion_obj = Emotion(win=win, trigger_interval=5, **emotion_params)
+'''
+
+
+class Emotion:
+    """Emotion paradigm with unified user interaction, matching MetaBCI framework style."""
+
+    DEFAULT_RATINGS = {
+        "VA": ["Liking", "Valence", "Arousal"],
+        "DP": ["Sadness", "Depression", "Empathy"],
+        "PR": ["Pleasure", "Relaxation"],
+    }
+
+    def __init__(self, win, trigger_interval=5, refresh_rate=60, **kwargs): #colorSpace="rgb", allowGUI=True,
+        self.win = win
+        self.port = 0
+        self.trigger_interval = trigger_interval
+        self.refresh_rate = refresh_rate
+        self.experiment_params = kwargs.get("experiment_Stimulus")
+        self.block_name = list(kwargs.get("experiment_setup").keys())
+        self.trigger_labels = {name: i+1 for i, name in enumerate(self.block_name)}
+        self.experiment_setup = kwargs.get("experiment_setup")
+
+        self.data_window = None
+        self.window_thread = None
+        self._stop_event = threading.Event()
+
+    def set_port(self, port):
+        self.port = port
+
+    def start_live_data(self, inlet):
+        """
+        启动实时数据显示窗口(在后台线程中运行)
+
+        参数:
+            inlet: LabStreamingLayer 数据输入流(StreamInlet实例)
+            update_interval: 数据更新间隔(秒)
+        """
+        self._stop_event.clear()
+        self.window_thread = threading.Thread(
+            target=self._run_data_window,
+            args=(inlet,),
+            daemon=True
+        )
+        self.window_thread.start()
+
+    def _run_data_window(self, inlet: StreamInlet):
+        """在后台线程中运行Tkinter数据显示窗口"""
+
+        # 注意：Tkinter不是线程安全的，需使用特殊方式创建窗口
+        # 在主线程中创建窗口会导致阻塞，因此使用Tk的mainloop在子线程中运行
+
+        # 创建Tkinter窗口的函数（需在子线程中执行）
+
+        def create_window():
+            root = tk.Tk()
+            root.title("实时数据显示")
+            root.geometry("200x80")
+            root.configure(bg="black")
+            root.overrideredirect(True)  # 无边框窗口
+            root.attributes("-topmost", True)  # 置顶窗口
+            root.attributes("-alpha", 0.6)  # 透明度
+
+            # 确保窗口关闭时触发停止事件
+            def on_closing():
+                self._stop_event.set()
+                root.destroy()
+
+            root.protocol("WM_DELETE_WINDOW", on_closing)
+
+            # 创建数据显示标签
+            data_font = tk.font.Font(family="Consolas", size=12, weight="normal")
+            data_label = tk.Label(
+                root,
+                text="等待数据...",
+                fg="white",
+                bg="black",
+                font=data_font,
+                justify=tk.LEFT
+            )
+            data_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+            # 数据更新函数
+            def update_data():
+                if self._stop_event.is_set():
+                    root.destroy()
+                    return
+
+                samples, _ = inlet.pull_sample(timeout=0)
+
+                if samples is not None:
+                    data_display = f"标签: {samples[0]}"
+
+                else:
+                    data_display = "等待预测..."
+
+                data_label.config(text=data_display)
+
+                # 定时更新
+                root.after(int(1000), update_data)
+
+            # 启动数据更新
+            print("starting feedback win")
+            update_data()
+            root.mainloop()
+
+
+        # 在子线程中创建窗口
+        window_thread = threading.Thread(target=create_window, daemon=True)
+        window_thread.start()
+        # self.data_window = root  # 注意：这里需要特殊处理，实际实现可能需要调整
+
+    def stop_live_data(self):
+        """停止并关闭实时数据显示窗口"""
+        self._stop_event.set()
+
+        # 等待线程结束
+        if self.window_thread and self.window_thread.is_alive():
+            self.window_thread.join(timeout=2.0)
+
+        # 确保窗口已关闭（Tkinter部分可能需要额外处理）
+
+    def show_message(self, text, wait_for_space=True, color='white'):
+        msg = visual.TextStim(self.win, text=text, color=color)
+        msg.draw()
+        self.win.flip()
+        if wait_for_space:
+            event.waitKeys(keyList=['space'])
+
+    def ask_ready(self, task_name):
+        self.show_message(f"即将进行：{task_name}\n请确认是否准备好\n准备好请按空格键")
+        # for i in range(5):
+        #     self.show_message(f"准备中... 请稍等{5-i}秒", wait_for_space=False)
+        #     core.wait(1)
+
+    def show_rating_window(self, rating, title="评分"):
+
+        if type(rating) is list and len(rating) >= 1:
+            indexs = rating
+        elif rating in self.DEFAULT_RATINGS.keys():
+            indexs = self.DEFAULT_RATINGS[rating]
+        else:
+            AttributeError("Rating Type Error")
+
+        scores = {}
+        for index in indexs:
+            self.show_message(f"{title}\n{index}\n请按1-9评分", wait_for_space=False)
+            keys = event.waitKeys(keyList=[str(i) for i in range(1, 10)])
+            scores[index] = keys[0]
+        return scores
+
+    def save_scores(self, name, scores):
+        with open('scores.txt', 'a', encoding='utf-8') as f:
+            f.write(f"== {name} ==\n")
+            for k, v in scores.items():
+                f.write(f"{k}: {str(v)}\n")
+            f.write("-" * 40 + "\n")
+
+    def play_video_from_url(self, video_url, port=None, label=None):
+        try:
+            instance = vlc.Instance()
+            player = instance.media_player_new()
+            media = instance.media_new(video_url)
+
+            # 设置网络缓存时间(毫秒)
+            media.add_option(':network-caching=3000')
+
+            player.set_media(media)
+
+            player.play()
+
+            # 等待媒体加载
+            time.sleep(1)
+            #
+            # 检查是否真的在播放
+            retry_count = 0
+            while retry_count < 5 and not player.is_playing():
+                time.sleep(1)
+                retry_count += 1
+
+            if not player.is_playing():
+                print("无法播放视频，请检查URL和网络连接")
+                player.stop()
+                return
+
+            # 全屏播放
+            player.set_xwindow(0)
+            player.set_fullscreen(True)
+
+            # 等待播放结束
+            while player.is_playing() and not keyboard.is_pressed('esc'):
+                if port is not None:
+                    port.setData(label)
+                    time.sleep(self.trigger_interval)
+
+        except Exception as e:
+            print(f"播放过程中发生错误: {e}")
+        finally:
+            player.stop()
+
+    def play_mp4(self, name, label, stimulus_params):
+
+        # stimulus_files = self.experiment_params.get("stimulus_files") or {}
+        video_url = stimulus_params["url"]
+        self.ask_ready("视频观看实验")
+        self.show_message("请在浏览器观看视频，结束后返回本窗口评分", wait_for_space=False)
+
+        if self.port:  #视频开始的时候打trigger, setData(label)
+            self.play_video_from_url(video_url, self.port, label)
+        else:
+            self.play_video_from_url(video_url)
+
+        if self.port: self.port.setData(0)
+
+        if "rating" in stimulus_params.keys():
+            scores = self.show_rating_window(stimulus_params["rating"], title=f"评分: {name}")
+            self.save_scores(f"{name}_{label}", scores)
+
+
+    def play_music_and_image(self, name, label, stimulus_params):
+        music_file = stimulus_params.get("music")
+        image_file = stimulus_params.get("image")
+        self.ask_ready("音频刺激实验")
+        image_stim = visual.ImageStim(self.win, image=image_file)
+        image_stim.draw()
+        self.win.flip()
+        pygame.mixer.init()
+        pygame.mixer.music.load(music_file)
+
+        # 设置播放结束时的事件
+        pygame.mixer.music.play()
+
+        # 在游戏循环中处理音乐结束事件1
+        while pygame.mixer.music.get_busy() and not keyboard.is_pressed('esc'):
+            if self.port is not None:
+                self.port.setData(label)
+                time.sleep(self.trigger_interval)
+        pygame.mixer.music.stop()
+        if self.port: self.port.setData(0)
+        print("音乐播放结束")
+
+        if "rating" in stimulus_params.keys():
+            scores = self.show_rating_window(stimulus_params["rating"], title=f"评分: {name}")
+            self.save_scores(f"{name}_{label}", scores)
+
+
+    def thermal_stimulus(self, name, label, stimulus_params):
+
+        self.ask_ready("冷热刺激实验")
+        self.show_message("请放置手部到冷热刺激设备\n按空格开始")
+        if self.port: self.port.setData(label)
+        self.show_message("正在进行冷热刺激...", wait_for_space=False)
+
+        start_time = time.time()
+        while (time.time() - start_time) < stimulus_params["thermal_stimulus_duration"]:
+            if self.port is not None:
+                self.port.setData(label)
+                time.sleep(self.trigger_interval)
+
+        if self.port: self.port.setData(0)
+        self.show_message("刺激结束，请评分", wait_for_space=False)
+        core.wait(1)
+        scores = self.show_rating_window(["Comfort", "Intensity"], title="冷热刺激评分")
+        self.save_scores("Thermal Stimulus", scores)
+
+    def anxiety_paradigm(self, name, label, stimulus_params):
+        self.ask_ready("焦虑情绪测试")
+        threat_images = stimulus_params.get("threat_images")
+        neutral_images = stimulus_params.get("neutral_images")
+        alarm_sound = stimulus_params.get("alarm_sound")
+        for trial in range(stimulus_params["trial_count"]):
+            self.show_message("警告：即将有刺激出现", wait_for_space=False, color='red')
+            if self.port: self.port.setData(label)
+
+            core.wait(random.uniform(0.8, 1.5))
+            self.win.color = [0, 0, 0]
+            self.win.flip()
+            core.wait(random.uniform(0.2, 0.5))
+            self.win.color = [0.3, 0.3, 0.3]
+            is_threat = random.random() < 0.7
+            img_file = random.choice(threat_images if is_threat else neutral_images)
+            play_sound = random.random() < 0.7
+            stim = visual.ImageStim(self.win, image=img_file)
+            stim.draw()
+            self.win.flip()
+            if play_sound:
+                try:
+                    pygame.mixer.music.load(alarm_sound)
+                    pygame.mixer.music.play()
+                except Exception:
+                    pass
+            core.wait(random.uniform(1.2, 2.2))
+            self.win.color = [0, 0, 0]
+            self.win.flip()
+            core.wait(0.3)
+            self.win.color = [0.3, 0.3, 0.3]
+            if self.port: self.port.setData(0)
+
+            self.show_message(f"Trial {trial + 1} Rating\n请如实评价你的紧张/不安程度", wait_for_space=False, color='red', height=0.07)
+            core.wait(1)
+            scores = self.show_rating_window(["Tension", "Uncertainty"], title=f"Trial {trial + 1} Rating")
+            scores["Image"] = img_file
+            self.save_scores("Anxiety Paradigm", scores)
+
+        self.show_message("焦虑范式测试结束", wait_for_space=False)
+        core.wait(3)
+
+
 class GetPlabel_MyTherad:
     """
     Open the sub-thread to obtain the online feedback label,
@@ -2438,6 +2810,13 @@ def paradigm(
     lsl_source_id=None,
     online=None,
     device_type="NeuroScan",
+
+    w = 1920, # used for light tigger to display stimulate window
+    h = 1080,
+    _buffer=None # used for virtual trigger,
+        # dict should be multiprocessing.Manager().dict()
+        # or
+        # demos.brainstim_demos.sharedmemory.SharedDict
 ):
     """
     The classical paradigm is implemented, the task flow is defined, the ' q '
@@ -2504,10 +2883,37 @@ def paradigm(
         port = NeuroScanPort(port_addr, use_serial=True) if port_addr else None
     elif device_type == "Neuracle":
         port = NeuraclePort(port_addr) if port_addr else None
+
+    # adding support for light trigger and virtual tigger
+    # Author: Li Haobo
+    # Email: lihaoboece@gmail.com
+    # #assistBCI-v2024-v2025
+    elif device_type == "Light_trigger":
+        print("device connecting")
+        if port_addr:
+            port = Light_trigger(w=w, h=h)
+            port.start()
+            while not port.win_start.is_set():
+                time.sleep(0.1)
+            time.sleep(1)
+        else:
+            port = None
+    elif device_type == "Virtual_trigger":
+        if online:
+            if _buffer is None:
+                raise ValueError("Shared memory is required for virtual trigger")
+            port = Virtual_trigger(dict=_buffer, port=port_addr)
+            # print("device connecting")
+
     else:
         raise KeyError(
             "Unknown device type: {}, please check your input".format(device_type))
     port_frame = int(0.05 * fps)
+
+    if device_type == "Light_trigger":
+        port_frame = range(VSObject.stim_frames)
+    else:
+        port_frame = int(0.05 * fps)
 
     inlet = False
     if online:
@@ -3188,3 +3594,52 @@ def paradigm(
                     VSObject.text_response.draw()
                     iframe += 1
                     win.flip()
+
+    elif pdim == "emotion":
+        """
+                完整的Emotion paradigm主流程：
+                - 统一准备提示
+                - 每个子实验前后有提示和等待
+                - 每个子实验执行后有评分和保存分数
+                - 记录每个子实验的开始和结束时间
+                - experiment_setup 控制子实验顺序和启用
+                """
+        VSObject.set_port(port)
+        VSObject.ask_ready(pdim)
+
+        # 检测实验设置
+        for name in VSObject.block_name:
+            print(name)
+            exp = VSObject.experiment_setup[name]
+            method = getattr(VSObject, exp, None)
+            if not callable(method) and method:
+                AttributeError("Unknown Experiment setup: ", name, "<block name> ", exp, "<method>")
+                break
+        if port:
+            port.setData(0)
+            if inlet:
+                VSObject.start_live_data(inlet)
+
+        for name in VSObject.block_name:
+            method = getattr(VSObject, VSObject.experiment_setup[name], None)
+            # 子实验开始提示
+            VSObject.show_message(f"即将开始：{name}", wait_for_space=False, color='yellow')
+            experiment_params = VSObject.experiment_params[name]
+            core.wait(1)
+            start_time = datetime.now()
+            method(name, VSObject.trigger_labels[name], experiment_params)
+            end_time = datetime.now()
+            # 子实验结束提示
+            duration = (end_time - start_time).total_seconds()
+            VSObject.show_message(f"{name} 已结束\n用时: {duration:.1f} 秒", wait_for_space=False, color='green')
+            core.wait(1)
+
+        VSObject.show_message("本轮Emotion范式全部结束，感谢参与！\n请等待实验员指示。", wait_for_space=False, color='white')
+        if inlet:
+            VSObject.stop_live_data()
+        core.wait(2)
+
+    if device_type == "Light_trigger":
+        port.setData(-1)
+        port.join()
+    del port
