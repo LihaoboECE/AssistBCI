@@ -3,10 +3,12 @@
 Amplifiers.
 
 """
+import os
 import socket
 import struct
 import threading
 import time
+import datetime
 from abc import abstractmethod
 from collections import deque
 from typing import List, Optional, Tuple, Dict, Any
@@ -14,9 +16,18 @@ from typing import List, Optional, Tuple, Dict, Any
 import numpy as np
 import pylsl
 import queue
+import scipy
 
 from .logger import get_logger
 from .workers import ProcessWorker
+
+
+from neuro_dance.nd_device_process import NdDeviceBase
+from demos.brainstim_demos.sharedmemory import SharedDict
+from multiprocessing import Lock
+from pylsl.pylsl import StreamInlet, resolve_byprop
+
+
 
 logger_amp = get_logger("amplifier")
 logger_marker = get_logger("marker")
@@ -66,6 +77,20 @@ class RingBuffer(deque):
         """
         return list(self)
 
+    def isEmpty(self):
+        '''
+        whether buffer in empty
+
+        Returns
+        -------
+            True or False
+
+        Author: Li Haobo
+        Email: lihaoboece@gmail.com
+        # assistbci-v2024-v2025
+        '''
+        return len(self) == 0
+
 
 class Marker(RingBuffer):
     """Intercept online data.
@@ -89,9 +114,28 @@ class Marker(RingBuffer):
 
     def __init__(
         self, interval: list, srate: float, events: Optional[List[int]] = None,
-        patch_size: Optional[int] = None
+        patch_size: Optional[int] = None, save_data: Optional[bool] = False, info: dict = {},
+            clear_after_use = False, location=None,
+            experiment_name: str = 'NoName', subject: int = 1
     ):
         self.events = events
+
+        '''
+        Adding data saving function
+        Author: Li Haobo
+        #assistbci-v2024-v2025
+        '''
+        self.info = info
+        self.info['events'] = self.events
+        self.save_data = save_data
+        self.raw_data = {}
+        self.raw_data['experiment_name'] = experiment_name
+        self.raw_data['subject'] = subject
+        self.clear_after_use = clear_after_use
+        self.location = location
+        self.experiment_name = experiment_name
+        self.subject = subject
+
         if events is not None:
             self.interval = [int(i * srate) for i in interval]
             self.latency = 0 if self.interval[1] <= 0 else self.interval[1]
@@ -146,8 +190,8 @@ class Marker(RingBuffer):
                     new_key = "".join(
                         [
                             str(event),
-                            # datetime.datetime.now().strftime("%Y-%m-%d \
-                            #     -%H-%M-%S"),
+                            datetime.datetime.now().strftime("%Y-%m-%d \
+                                -%H-%M-%S"),  # Needed in Assistbci-v2024-v2025 优化key名称
                         ]
                     )
                     self.countdowns[new_key] = self.latency + 1
@@ -174,6 +218,24 @@ class Marker(RingBuffer):
 
         for key in drop_items:
             del self.countdowns[key]
+            '''
+            Data saving function
+            Author: Li Haobo
+            Email: lihaoboece@gmail.com
+            #assistBCI-v2024-v2025
+            '''
+            if self.save_data:
+                if key == "fixed":
+                    if key in self.raw_data.keys():
+                        _block = super().get_all()
+                        for elements in _block:
+                            self.raw_data[key].append(elements)
+                    else:
+                        self.raw_data[key] = super().get_all()
+                else:
+                    self.raw_data[key] = super().get_all()
+                print("data buffed - key: ", key)
+
         if drop_items and self.isfull():
             return True
         return False
@@ -187,6 +249,57 @@ class Marker(RingBuffer):
         if isinstance(self.patch_size, int) and self.threshold_ind > 0:
             return data[self.threshold_ind: self.epoch_ind[1]]
         return data[self.epoch_ind[0]: self.epoch_ind[1]]
+
+
+    def save_as_mat(self):
+        '''
+        Saving experiment data
+        Author: Li Haobo
+        Email: lihaoboece@gmail.com
+        #assistBCI-v2024-v2025
+        '''
+
+        if self.location == None:
+            user_home = os.path.expanduser('~')
+            user_dir = os.path.join(user_home, 'AssistBCI\\Experiment_Raw_data')
+            info_dir = os.path.join(user_home, 'AssistBCI\\Experiment_Raw_data_info')
+            if not os.path.exists(user_dir):
+                os.makedirs(user_dir)
+            if not os.path.exists(info_dir):
+                os.makedirs(info_dir)
+        else:
+            user_dir = self.location + 'AssistBCI\\Experiment_Raw_data'
+            info_dir = self.location + 'AssistBCI\\Experiment_Raw_data_info'
+
+        name_mat = "{:s}\\E_{:s}_S_{:d}_R_{:s}.mat".format(user_dir, self.experiment_name, self.subject, datetime.datetime.now().strftime("%Y%m%d%H%M%S"))
+        name_txt = "{:s}\\E_{:s}.txt".format(info_dir, self.experiment_name)
+
+        scipy.io.savemat(name_mat, self.raw_data)
+        if os.path.exists(info_dir + '\\' +name_txt):
+            try:
+                with open(info_dir + '\\' +name_txt, 'r') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        elements = line.split('\n')[0]
+                        elements = elements.split('=')
+                        if elements[0] == 'subject':
+                            subject = elements[1]
+                            break
+
+            except Exception as e:
+                print(f"An error occurred while reading the file: {e}")
+            self.info['subject'] = eval(subject).append(self.info['subject'])
+
+        else:
+            self.info['subject'] = [self.info['subject']]
+
+        filename = open(name_txt, 'w')
+        for k, v in self.info.items():
+            filename.write(k + ':' + str(v))
+            filename.write('\n')
+        filename.close()
+        del self.info, self.raw_data
+        print("Experiment Data Saved")
 
 
 class BaseAmplifier:
@@ -251,7 +364,13 @@ class BaseAmplifier:
 
     def up_worker(self, name):
         logger_amp.info("up worker-{}".format(name))
-        self._workers['feedback_worker'].start()
+
+        '''
+        bug fix: 'feedback_worker' -> name
+        Author: Li Haobo
+        Email: lihaoboece@gmail.com
+        '''
+        self._workers[name].start()
 
     def down_worker(self, name):
         logger_amp.info("down worker-{}".format(name))
@@ -274,6 +393,16 @@ class BaseAmplifier:
         logger_amp.info("clear all workers")
         worker_names = list(self._workers.keys())
         for name in worker_names:
+
+            '''
+            Auto Saving function
+            Author: Li Haobo
+            Email: lihaoboece@gmail.com
+            #AssistBCI-v2024-v2025
+            '''
+            if self._markers[name].save_data:
+                self._markers[name].save_as_mat()
+
             self._markers[name].clear()
             self.down_worker(name)
             self.unregister_worker(name)
@@ -827,6 +956,368 @@ class Neuracle(BaseAmplifier):
         if self.tcp_link:
             self.tcp_link.close()
             self.tcp_link = None
+
+
+class NdDevice(NdDeviceBase):
+    """
+        NeuroDance device core
+        -author: LIHAOBO
+        -Created on: 2024-06-08
+        #assistBCI-v2025
+    """
+    eeg_datas = RingBuffer(200)
+    eeg_timestamp = RingBuffer(200)
+    eeg_sample = 1000
+    mode = None
+
+    def __init__(self, mode, com, tcp_ip, tcp_port, host_mac_bytes=None):
+        # super(NdDeviceBase, self).__init__(mode, com, tcp_ip, tcp_port, host_mac_bytes)
+        NdDeviceBase.__init__(self, mode, com, tcp_ip, tcp_port, host_mac_bytes)
+        self.mode = mode
+
+    def eeg_received(self, data):
+        if self.eeg_datas.isfull():
+            print("warning: full buffer, samples loss")
+        self.eeg_datas.append(data['data'])
+        self.eeg_timestamp.append(data['timestamp'])
+
+    def array_shape(self, arr):
+        if isinstance(arr, list):
+            return [len(arr)] + self.array_shape(arr[0])
+        else:
+            return []
+
+    def get_data(self):
+        while True:
+            if not self.eeg_datas.isEmpty():
+                eeg = self.eeg_datas.get_all()
+                timestamp = self.eeg_timestamp.get_all()
+                self.eeg_datas.clear()
+                self.eeg_timestamp.clear()
+                break
+        return eeg, timestamp
+
+
+class NeuroDance(BaseAmplifier):
+    """
+        An amplifier implementation for NeuroDance device.
+        Intercept online data.
+        -author: LIHAOBO
+        -Created on: 2024-06-08
+
+        note: only work for srate==1000
+        lsl_source_id: 用于传输事件标签
+        dict: 用于传输时间戳，采用multiprocessing.Manager().dict()
+                                        or
+                    demos.brainstim_demos.sharedmemory.SharedDict:
+                    一个跨进程跨线程，基于Memory Map技术的共享内存
+        #assistBCI-v2025
+    """
+
+    def __init__(
+            self,
+            device_address: Tuple[str, int] = ("0.0.0.0", 8899),
+            srate: float = 1000,
+            num_chans: int = 8,
+            dict=None,  # used for Virtual_trigger, you can path a multiprocessing.Manager().dict()
+            mode='tcp',
+            com='',
+            host_mac_bytes=None,
+            use_share_memory=True
+    ):
+        super().__init__()
+
+        self.ND = NdDevice(mode, com, device_address[0], device_address[1], host_mac_bytes)
+
+        self.mode = mode
+
+        self.device_address = device_address
+        self.srate = srate
+        self.num_chans = num_chans
+
+        self.trigger_port = 1 #NeuroDance supporte only port: 1 or 2
+
+        if dict is None and use_share_memory:
+            dict = SharedDict()
+
+        if dict != None:
+            self.lock = Lock()
+            self._buffer = dict
+            self.API = True
+
+            self.lock.acquire()
+            try:
+                self._buffer["Virtual_trigger"] = 0
+            finally:
+                # 无论如何都要释放锁
+                self.lock.release()
+        else:
+            self.API = False
+
+
+    def recv(self):
+        d, t = self.ND.get_data()
+        data = self._unpack_data(d, t)
+        return data.tolist()
+
+
+    def _unpack_data(self, data_recv, timestamp_recv):
+        result_matrix = np.concatenate(data_recv, axis=1).squeeze().T
+        result_matrix = np.insert(result_matrix, 8, 0, axis=1)
+
+        if type(self._buffer["Virtual_trigger"]) is list:
+            self.trigger_port = 2
+            label, syn_time = int(self._buffer["Virtual_trigger"][0]), self._buffer["Virtual_trigger"][1]
+        else:
+            self.trigger_port = 1
+            label, syn_time = 1, self._buffer["Virtual_trigger"]
+
+        # print(self._buffer["Virtual_trigger"])
+
+        if self.API:
+            if self.trigger_port==1 and syn_time <= 1:
+                # print("Trigger component online")
+                pass
+
+            elif timestamp_recv[0] <= syn_time <= timestamp_recv[0] + result_matrix.shape[0]:
+
+                result_matrix[:, -1] = 0
+                result_matrix[int(syn_time-timestamp_recv[0]), -1] = label
+                # print("replaced")
+
+                self.lock.acquire()
+                try:
+                    self._buffer["Virtual_trigger"] = 1
+                finally:
+                    # 无论如何都要释放锁
+                    self.lock.release()
+
+            else:
+                print('loss synchronization (ms):', syn_time - timestamp_recv[0])
+
+        return result_matrix
+
+    def connect_tcp(self):
+        self.ND.start()
+
+    def start_trans(self):
+        time.sleep(1e-2)
+        self.start()
+
+    def stop_trans(self):
+        self.stop()
+
+    def close_connection(self):
+        self.ND.close()
+        '''
+        when using this function, you should first debug 
+        the NeuroDance NdDeviceBase
+        Because ND.close() can not safely break multiprocessing, 
+        in detail ND.close() function will be blocked by .join()
+        '''
+
+
+class BlueBCI(BaseAmplifier):
+    """An amplifier implementation for BlueBCI device.
+    Intercept online data.
+    -author: Qihao Xu and Li Haobo
+    -Created on: 2024-07-04
+    #assistBCI-v2024
+    """
+
+    def __init__(
+            self,
+            device_address: Tuple[str, int] = ("127.0.0.1", 12345),
+            srate: float = 1000,
+            num_chans: int = 8,
+            lsl_source_id: str = "trigger",
+            dict=None #用于Virtual_trigger (optional)
+    ):
+        super().__init__()
+        self.device_address = device_address
+        self.srate = srate
+        self.num_chans = num_chans
+        self.tcp_link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # the size of a package in neuroscan data is
+        # 15*33bytes= 495 bytes
+        self.timeout = 2 * 25 / self.srate
+        self.n = 1000  # n 应该根据你的实际需求来设置
+        self.buffer_size = 33 * self.n
+        self.tcp_link.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.buffer_size)
+
+        self.lsl_source_id = lsl_source_id
+        self.streams = []
+
+        self.use_trigger = False
+
+        if dict != None:
+            self.lock = Lock()
+            self._buffer = dict
+            self.API = True
+
+            self.lock.acquire()
+            try:
+                self._buffer["Virtual_trigger"] = 0
+            finally:
+                # 无论如何都要释放锁
+                self.lock.release()
+        else:
+            self.API = False
+
+        #self.rise = True
+
+
+    def set_timeout(self, timeout):
+        if self.tcp_link:
+            self.tcp_link.settimeout(timeout)
+
+    def recv(self):
+        # wait for the socket available
+        ###
+        if self.use_trigger:
+            if not self.streams:
+                self.streams = resolve_byprop(
+                    "source_id", self.lsl_source_id, timeout=0.0001
+                )  # Resolve all streams by source_id
+                if self.streams:
+                    self.inlet = StreamInlet(self.streams[0])
+                    print("Connected to port，waiting")
+                    self.port_start_time = time.time() #用于trigger自动休眠
+                    self.samples = []
+
+            if time.time() - self.port_start_time > 60:  # 一分钟内没有闪烁,自动关闭
+                self.use_trigger = False
+                del self.inlet, self.samples
+
+        ###
+
+        data = None
+        try:
+            received_data = self.tcp_link.recv(self.buffer_size)
+            data_recv = np.frombuffer(received_data, dtype=np.uint8)
+        except Exception:
+            self.tcp_link.close()
+            print("Can not receive data from socket")
+        else:
+            data = self._unpack_data(data_recv)
+            #data = data.T
+        return data.tolist()
+
+
+    def _unpack_data(self, data_recv):
+        bytes_to_read = len(data_recv)
+        column_num = int(bytes_to_read / 33)
+        data_recv1 = data_recv.reshape((33, column_num), order='F')
+        data_recv2 = np.array(data_recv1).astype(np.float64)
+
+
+        road = data_recv1[2:27:3, :]  # 从索引3开始每隔3取一行
+        road = road.T
+        # 修改data_recv2中的特定行
+        data_recv2[2:27:3, :] *= 2 ** 16
+        data_recv2[3:28:3, :] *= 2 ** 8
+        data_recv2[4:29:3, :] *= 2 ** 0
+
+        # 创建数据通道数组
+        result_matrix = []
+        for i in range(2, len(data_recv2) - 4, 3):  # 从索引2开始，步长为3，确保i+2不超出索引范围
+            # 累加第i行、第i+1行和第i+2行
+            sum_row = data_recv2[i] + data_recv2[i + 1] + data_recv2[i + 2]
+
+            result_matrix.append(sum_row)
+
+        result_matrix = np.array(result_matrix)
+        result_matrix = result_matrix.T
+        # 查找小于等于2^7的索引
+        idx_chn = np.where(road >= 2 ** 7)
+
+        # 小于等于2^7减去2^24
+        result_matrix[idx_chn] -= 2 ** 24
+        scale_fac_uVolts_per_count = 0.022351744455307063
+        result_matrix = result_matrix * scale_fac_uVolts_per_count
+
+        if self.API:
+            #使用虚拟trigger打标，速度更快
+            if self._buffer["Virtual_trigger"] == 2:
+                result_matrix[0, -1] = 1
+                result_matrix[1:, -1] = 0
+
+                self.lock.acquire()
+                try:
+                    self._buffer["Virtual_trigger"] = 1
+                finally:
+                    # 无论如何都要释放锁
+                    self.lock.release()
+
+                return result_matrix
+
+        if self.use_trigger:
+            try:
+                samples, timestamp = self.inlet.pull_sample(timeout=0)
+                self.samples.append(samples[0])
+                print("event received", samples[0])
+                print(self.samples)
+            except:
+                pass
+
+        if (result_matrix[:, -1] > 0).any():
+            self.port_start_time = time.time()
+            self.use_trigger = True
+            if len(self.samples) != 0:
+                for i in range(len(result_matrix[:, -1])):
+                    if result_matrix[i, -1] != 0:
+                        result_matrix[i, -1] = self.samples[0]
+                        result_matrix[i + 1:, -1] = 0
+                        print("replaced")
+                        self.samples = self.samples[1:]
+                        break
+                samples = None
+                timestamp = None
+                print("cleared")
+            else:
+                result_matrix[:, -1] = 0
+
+
+        return result_matrix
+
+        # if (result_matrix[:, -1] > 0).any():
+        #     samples = None
+        #     timestamp = None
+        #     self.port_start_time = time.time()
+        #     self.use_trigger = True
+        #     try:
+        #         samples, timestamp = self.inlet.pull_sample(timeout=0)
+        #         print("event received", samples[0])
+        #         if samples != None and timestamp != None:
+        #             for i in range(len(result_matrix[:, -1])):
+        #                 if result_matrix[i, -1] != 0:
+        #                     result_matrix[i, -1] = samples[0]
+        #                     result_matrix[i + 1:, -1] = 0
+        #                     break
+        #         else:
+        #             result_matrix[:, -1] = 0
+        #
+        #     except:
+        #         result_matrix[:, -1] = 0
+        #
+        # return result_matrix
+
+
+    def connect_tcp(self):
+        self.tcp_link.connect(self.device_address)
+
+    def start_trans(self):
+        time.sleep(1e-2)
+        self.start()
+
+    def stop_trans(self):
+        self.stop()
+
+    def close_connection(self):
+        if self.tcp_link:
+            self.tcp_link.close()
+            del self.tcp_link
+
 
 
 class LSLInlet:
