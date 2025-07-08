@@ -8,12 +8,14 @@ from metabci.brainstim.paradigm import (
     MI,
     AVEP,
     SSAVEP,
+    Emotion,
     paradigm,
     pix2height,
     code_sequence_generate,
 )
 from metabci.brainstim.framework import Experiment
 from psychopy.tools.monitorunittools import deg2pix
+from sharedmemory import SharedDict
 
 if __name__ == "__main__":
     mon = monitors.Monitor(
@@ -38,9 +40,75 @@ if __name__ == "__main__":
         process_priority="normal",
         use_fbo=False,
     )
-    win = ex.get_window()
+    # 如果需要使用线上视频功能，请将allowGUI设置为True，因为psychopy与vlc窗口会冲突
+    win = ex.get_window(allowGUI=True)
 
     # q退出范式界面
+    """
+    Emotion / Physiological`
+    """
+    emotion_params = {
+        "rating_scale_range": (0, 10),  # for all
+
+        "experiment_setup": {
+            "video 1": "play_mp4",
+            "video 2": "play_mp4",
+            "music 1": "play_music_and_image",
+            "thermal 1": "thermal_stimulus",
+            "anxiety 1": "anxiety_paradigm"},
+
+        "experiment_Stimulus": {
+            "video 1": {
+                "rating": "VA",  # "DP": depression or "VA": Valence-Arousal
+                "url": "C:\\Users\\m1358\\Desktop\\30266886520-1-192.mp4"},
+
+            "video 2": {
+                "rating": "VA",  # "DP": depression or "VA": Valence-Arousal
+                "url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"},
+
+            "music 1": {
+                "music_duration": 20, "rating": ["Sadness", "Depression", "Empathy"],
+                "music": "12345.mp3",
+                "image": "R.jpg"},
+
+            "thermal 1": {
+                "thermal_stimulus_duration": 10},
+
+            "anxiety 1": {
+                "trial_count": 5,
+                "threat_images": ["01.png", "02.png"],
+                "neutral_images": ["03.png", "04.png"],
+                "alarm_sound": "wind-artificial-18750.mp3", }
+        }
+
+    }
+
+    # 初始化 Emotion 实验
+    emotion_obj = Emotion(win=win, trigger_interval=5, **emotion_params)
+
+    # 设置线上实验参数
+    lsl_source_id = "emotion_experiment_worker"  # 接受 worker 反馈
+
+    online = True  # 是否给设备打trigger
+
+    dict = SharedDict()  # 如果使用bluebci 或 NeuroDance，需要传入sharedmemory.SharedDict
+
+    # 注册实验范式
+    ex.register_paradigm(
+        'basic Emotion',
+        paradigm,
+        VSObject=emotion_obj,
+        bg_color=[0, 0, 0],
+        pdim='emotion',
+        port_addr=2,  # port_addr==1 trigger 为时间戳
+        nrep=1,
+        lsl_source_id=lsl_source_id,
+        online=online,
+        device_type="Virtual_trigger",
+        _buffer=dict
+    )
+
+
     """
     SSVEP
     """
