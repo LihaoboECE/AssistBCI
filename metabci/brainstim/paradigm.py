@@ -10,7 +10,7 @@ from math import pi
 from psychopy import data, visual, event, core
 from psychopy.visual.circle import Circle
 from pylsl import StreamInlet, resolve_byprop  # type: ignore
-from .utils import NeuroScanPort, NeuraclePort, _check_array_like
+from .utils import NeuroScanPort, NeuraclePort, _check_array_like, Light_trigger, Virtual_trigger
 import threading
 from copy import copy
 import random
