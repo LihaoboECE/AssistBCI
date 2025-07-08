@@ -80,6 +80,11 @@ def _get_file(
     url: str, file_name: Union[str, Path], known_hash: Optional[str] = None, **kwargs
 ):
     src_file = urlparse(url).path
+    # debug function for windows:
+    # Author: Li Haobo
+    # Email: lihaoboece@gmail.com
+    if os.name == 'nt':
+        src_file = url[7:9] + src_file.replace('/', '\\')
     path = os.path.dirname(file_name)
     if not os.path.exists(file_name):
         os.makedirs(path, exist_ok=True)
