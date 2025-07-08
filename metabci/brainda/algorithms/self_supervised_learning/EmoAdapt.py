@@ -5,24 +5,9 @@ import torch
 import numpy as np
 import torch.nn as nn
 from torch.utils.data import DataLoader
-import torch.nn.functional as f
-from metabci.brainda.algorithms.self_supervised_learning.utils import plot_embedding
 from typing import List
 import copy
-from timm.models.vision_transformer import Block
-from functools import partial
-from scipy import interpolate
-from scipy import signal
-import pandas as pd
-from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
-from sklearn.datasets import load_iris
-from matplotlib.patches import Ellipse
-from scipy.signal import butter, filtfilt, welch, detrend
-from sklearn.manifold import TSNE
-from sklearn.neighbors import KNeighborsClassifier
 import random
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import os
@@ -79,7 +64,6 @@ class EmoAdapt(nn.Module):
 
         self.num_patches, _ = token_len(fs=fs, second=second, time_window=time_window, time_step=time_step, channels=channels)
 
-        # self.backbone = Resnet(size=self.fs*self.time_window)
         self.backbone = SimplifiedResnet(size=self.fs * self.time_window)
 
         self.autoencoder = MaskedAutoEncoderViT(input_size=self.fs*self.time_window,
@@ -234,11 +218,11 @@ class EmoAdapt(nn.Module):
         best_model, best_score = copy.deepcopy(self), 0
         self.save_model(model=best_model)
 
-        # val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader)  ####
+        val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader)
         # val_acc, val_mf1 = self.ML_probing(train_dataloader, val_dataloader)
 
-        # print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
-        #     -1, val_acc * 100, val_mf1 * 100)) #####
+        print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
+            -1, val_acc * 100, val_mf1 * 100))
 
         for epoch in range(self.train_epochs):
             step = 0
@@ -279,16 +263,15 @@ class EmoAdapt(nn.Module):
                 total_step += 1
 
             if (epoch + 1) % 1 == 0:
-                # val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader) ######
+                val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader) ######
                 # val_acc, val_mf1 = self.ML_probing(train_dataloader, val_dataloader)
 
-                # if val_mf1 > best_score:  ######
-                #     best_model = copy.deepcopy(self)
-                #     best_score = val_mf1
-                best_model = copy.deepcopy(self)
+                if val_mf1 > best_score:  ######
+                    best_model = copy.deepcopy(self)
+                    best_score = val_mf1
 
-                # print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
-                #     epoch, val_acc * 100, val_mf1 * 100)) ######
+                print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
+                    epoch, val_acc * 100, val_mf1 * 100)) ######
 
                 self.optimizer.zero_grad()
                 self.scheduler.step()
@@ -308,29 +291,6 @@ class EmoAdapt(nn.Module):
                 frame.append(sample)
         frame = torch.stack(frame, dim=1).view(x.shape[0], -1, window)
         return frame
-
-
-    # def make_token(self, x):
-    #     size = self.fs * self.second
-    #     step = int(self.time_step * self.fs)
-    #     window = int(self.time_window * self.fs)
-    #
-    #     # Calculate the number of frames directly
-    #     num_frames = (size - window) // step + 1
-    #
-    #     # Create all indices at once using broadcasting
-    #     start_indices = torch.arange(0, num_frames * step, step, device=x.device)
-    #     end_indices = start_indices + window
-    #
-    #     # Use torch.stack with list comprehension for faster indexing
-    #     frame = torch.stack([x[..., start:end] for start, end in zip(start_indices, end_indices)], dim=1)
-    #
-    #     return frame.view(x.shape[0], -1, window)
-
-    # def make_token(self, x):
-    #     window = int(self.time_window * self.fs)
-    #     step = int(self.time_step * self.fs)
-    #     return x.unfold(-1, window, step).permute(0, 2, 1, 3).contiguous().view(x.shape[0], -1, window)
 
 
     def get_feature(self, x: torch.Tensor):

@@ -307,10 +307,6 @@ def extract_features(X, m_sampen=2, r_factor_sampen=0.2, num_bins_shannon=10):
     return features
 
 
-import numpy as np
-from scipy import interpolate, signal
-
-
 def augment_data(original_data, original_label=None, noise_scale=1.2, alpha=1.2,
                  n_segments=10, m_segments=10, distortion_factor_low=0.9,
                  distortion_factor_high=1.1, max_shift=5):
