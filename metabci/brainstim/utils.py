@@ -4,6 +4,10 @@ import numpy as np
 
 from pylsl import StreamInfo, StreamOutlet
 
+from multiprocessing import Event, Process, Lock
+import time
+import tkinter as tk
+
 
 class NeuroScanPort:
     """
@@ -133,6 +137,135 @@ class LsLPort:
         # We don't need 0 trigger before a int trigger
         if str(label) != '0':
             self.outlet.push_sample(str(label))
+
+
+class Virtual_trigger:
+    '''
+    virtual_trigger is used for trigger in same computer
+
+    Virtual_trigger: 三种状态
+    0：                    关闭
+    1：                    开启但未激发
+
+    根据设备要求，适配进行选择
+    2 / time.time() / [label, time.time()]：     激发（默认port=0 / 时间戳port=1 / 标签+时间戳 port=2）
+
+    使用场景：
+    port=0:   不需要label的trigger，对时间同步性要求低，例如使用无相位SSVEP进行控制
+    port=1：  不需要label的trigger，对时间同步性要求高，且设备支持毫秒级time.time()发包记录， 例如使用NeuroDance设备进行SSVEP控制
+    port=2:   需要label的trigger， 对时间同步性要求高，且设备支持毫秒级time.time()发包记录， 例如使用NeuroDance设备进行SSVEP线上实验
+    提示：如果只能使用光电trigger，请使用Light_trigger
+
+    Autor: Li Haobo
+    Email: lihaoboece@gmail.com
+    #assistBCI-v2024-v2025
+    '''
+
+    def __init__(self, dict, port=0):
+        self.lock = Lock()
+        self._buffer = dict
+
+        self.port = port
+        self.send("Virtual_trigger", 1) #开启
+
+    def send(self, name, data):
+        self.lock.acquire()
+        try:
+            self._buffer[name] = data
+        finally:
+            # 无论如何都要释放锁
+            self.lock.release()
+
+    def get(self, name):
+        return self._buffer[name]
+
+    def setData(self, label):
+        if label: #set(0)忽略
+            if self.port == 1:
+                self.send("Virtual_trigger", int(time.time() * 1000))  # 激发
+            elif self.port == 0:
+                self.send("Virtual_trigger", 2) #激发
+            elif self.port == 2:
+                self.send("Virtual_trigger", [int(label), int(time.time() * 1000)])  # 激发
+
+
+class Light_trigger(Process):
+    '''
+        Light trigger
+        using tkinter to display light stimulate,
+        using lsl to transfer label(event)
+        Author: Li Haobo
+        Email: lihaoboece@gmail.com
+        #assistBCI-v2024-v2025
+    '''
+
+    def __init__(self, lsl_source_id="trigger", w=1920, h=1080):
+        Process.__init__(self)
+        self.trigger_ = Event()
+        self._exit = Event()
+        self._exit.clear()
+        self.trigger_.clear()
+        self.outlet = []
+        self.start_setData = False
+        self.lsl_source_id = lsl_source_id
+        self.fps = 60
+        self.w = w
+        self.h = h
+        self.win_start = Event()
+        self.win_start.clear()
+
+    def toggle_color(self):
+        if self.trigger_.is_set():
+            self.canvas.itemconfig(self.square, fill="white")
+            self.trigger_.clear()
+        else:
+            current_color = self.canvas.itemcget(self.square, "fill")
+            if current_color == "white":
+                self.canvas.itemconfig(self.square, fill="black")
+
+    def run(self):
+        self.root = tk.Tk()
+        self.root.wm_attributes("-topmost", 1)
+        self.root.overrideredirect(True)
+        # x = int((self.root.winfo_screenwidth() - label.winfo_reqwidth()) / 2)
+        # y = int((self.root.winfo_screenheight() - label.winfo_reqheight()) / 2)
+        self.root.geometry("+{}+{}".format(-10, int(self.h* 7/8)))
+        self.canvas = tk.Canvas(self.root, width=self.w+20, height=int(self.h/8))
+        self.canvas.pack()
+        self.square = self.canvas.create_rectangle(0, 0, self.w+20, int(self.h/8), fill="black")
+        self.win_start.set()
+
+        while not self._exit.is_set():
+            self.toggle_color()
+            self.root.update()
+            time.sleep(1/self.fps)
+
+        self.root.destroy()
+
+    def setData(self, event):
+        if event == -1:
+            self._exit.set()
+        elif self.start_setData and event != 0:
+            self.outlet.push_sample([event])
+            self.trigger_.set()
+            # while not self.outlet.have_consumers():
+            #     time.sleep(1e-6)
+            # self.outlet.push_sample([event])
+            print("send event succeed", event)
+        elif not self.start_setData:
+            print("--------------------------port start--------------------------")
+            info = StreamInfo(
+                name='event_transmitter',
+                type='event',
+                channel_count=1,
+                nominal_srate=0,
+                channel_format='int32',
+                source_id=self.lsl_source_id)
+            self.outlet = StreamOutlet(info)
+            print('Waiting for Amplifier...')
+            self.start_setData = True
+            while self.outlet.have_consumers():
+                time.sleep(0.5)
 
 
 def _check_array_like(value, length=None):
