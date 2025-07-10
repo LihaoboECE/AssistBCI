@@ -101,10 +101,8 @@ EEG的状态监测受限于诱发范式，存在标记被动、场景适应性�
    │       ├── paradigm.py                 # Adding light and virtual tigger support, adding emotion paradim
    │       └── utils.py                    # Adding light and virtual trigger support
    │
-   └── vlc/```
-   
-
-
+   └── vlc/
+   ```
 
 ## 3. 新增功能
 
