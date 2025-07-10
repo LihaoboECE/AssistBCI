@@ -1,165 +1,164 @@
-# MetaBCI
+# AssistBCI-v2025——通用脑机接口辅助系统：基于 MetaBCI 的高效二次开发框架与全面个性化应用解决方案
+澳门大学
 
-## Welcome! 
-MetaBCI is an open-source platform for non-invasive brain computer interface. The project of MetaBCI is led by Prof. Minpeng Xu from Tianjin University, China. MetaBCI has 3 main parts:
-* brainda: for importing dataset, pre-processing EEG data and implementing EEG decoding algorithms.
-* brainflow: a high speed EEG online data processing framework.
-* brainstim: a simple and efficient BCI experiment paradigms design module. 
+李浩博、黄梓帆、朱峻毅、杨毅、陶威
 
-This is the first release of MetaBCI, our team will continue to maintain the repository. If you need the handbook of this repository, please contact us by sending email to TBC_TJU_2022@163.com with the following information:
-* Name of your teamleader
-* Name of your university(or organization)
+主要联系人. Tel.: (+86) 13581975632; email: li.haobo@connect.um.edu.mo
 
-We will send you a copy of the handbook as soon as we receive your information.
+## 1. 摘要
+EEG的状态监测受限于诱发范式，存在标记被动、场景适应性不足等问题。对此，我们基于MetaBCI框架构建了"智能预测-用户反馈"的双向交互机制，通过无监督模型构建个性化状态特征库，实现了多维度状态的半自动标定与精准监测。系统采用轻量级交互设计：检测到显著状态变化时，发起交互验证/标定，显著降低标注成本和标签噪音。通过动态优化算法，自适应优化类内/类间距离，满足用户的个性化状态需求。系统面向智能家居调节、情绪管理、疼痛监测等领域，支持用户根据实际需求自定义状态标签，并设置智能设备联动规则（如空调温控、应急求助、焦虑缓解措施等）。随着用户的使用，个性化特征库将不断丰富，最终实现"感知-决策-执行"闭环的智能化服务。
 
-## Paper
+**关键词: 特征提取，多维度生理与情感状态监测，个性化标注，轻量级交互，智能家居**
 
-If you find MetaBCI useful in your research, please cite:
+## 运行方法：
+### AssistBCI:
+    同时运行 `demos/brainflow_demos/AssistBCI_Backend_v2025.py` 与 'demos/brainstim_demos/AssistBCI_interface.py'
+### EmoAdapt:
+    模型训练 'demos/EmoAdapt_train.py'
+    模型常规线下测试 'demos/EmoAdapt_predict_offline.py'
+    模型模拟线上测试 ‘demos/EmoAdapt_predict_online.py’
 
-Mei, J., Luo, R., Xu, L., Zhao, W., Wen, S., Wang, K., ... & Ming, D. (2023). MetaBCI: An open-source platform for brain-computer interfaces. Computers in Biology and Medicine, 107806.
-
-And this open access paper can be found here: [MetaBCI](https://www.sciencedirect.com/science/article/pii/S0010482523012714)
-
-## Content
-
-- [MetaBCI](#metabci)
-  - [Welcome!](#welcome)
-  - [Paper](#paper)
-  - [What are we doing?](#what-are-we-doing)
-    - [The problem](#the-problem)
-    - [The solution](#the-solution)
-  - [Features](#features)
-  - [Installation](#installation)
-  - [Who are we?](#who-are-we)
-  - [What do we need?](#what-do-we-need)
-  - [Contributing](#contributing)
-  - [License](#license)
-  - [Contact](#contact)
-  - [Acknowledgements](#acknowledgements)
-
-## What are we doing?
-
-### The problem
-
-* BCI datasets come in different formats and standards
-* It's tedious to figure out the details of the data
-* Lack of python implementations of modern decoding algorithms
-* It's not an easy thing to perform BCI experiments especially for the online ones.
-
-If someone new to the BCI wants to do some interesting research, most of their time would be spent on preprocessing the data, reproducing the algorithm in the paper, and also find it difficult to bring the algorithms into BCI experiments.
-
-### The solution
-
-The Meta-BCI will:
-
-* Allow users to load the data easily without knowing the details
-* Provide flexible hook functions to control the preprocessing flow
-* Provide the latest decoding algorithms
-* Provide the experiment UI for different paradigms (e.g. MI, P300 and SSVEP)
-* Provide the online data acquiring pipeline.
-* Allow users to bring their pre-trained models to the online decoding pipeline.
-
-The goal of the Meta-BCI is to make researchers focus on improving their own BCI algorithms and performing their experiments without wasting too much time on preliminary preparations.
-
-## Features
-
-* Improvements to MOABB APIs
-   - add hook functions to control the preprocessing flow more easily
-   - use joblib to accelerate the data loading
-   - add proxy options for network connection issues
-   - add more information in the meta of data
-   - other small changes
-
-* Supported Datasets
-   - MI Datasets
-     - AlexMI
-     - BNCI2014001, BNCI2014004
-     - PhysionetMI, PhysionetME
-     - Cho2017
-     - MunichMI
-     - Schirrmeister2017
-     - Weibo2014
-     - Zhou2016
-   - SSVEP Datasets
-     - Nakanishi2015
-     - Wang2016
-     - BETA
-
-* Implemented BCI algorithms
-   - Decomposition Methods
-     - SPoC, CSP, MultiCSP and FBCSP
-     - CCA, itCCA, MsCCA, ExtendCCA, ttCCA, MsetCCA, MsetCCA-R, TRCA, TRCA-R, SSCOR and TDCA
-     - DSP
-   - Manifold Learning
-     - Basic Riemannian Geometry operations
-     - Alignment methods
-     - Riemann Procustes Analysis
-   - Deep Learning
-     - ShallowConvNet
-     - EEGNet
-     - ConvCA
-     - GuneyNet
-     - Cross dataset transfer learning based on pre-training
-   - Transfer Learning
-     - MEKT
-     - LST
-
-## Installation
-
-1. Clone the repo
-   ```sh
-   git clone https://github.com/TBC-TJU/MetaBCI.git
-   ```
-2. Change to the project directory
-   ```sh
-   cd MetaBCI
-   ```
-3. Install all requirements
-   ```sh
-   pip install -r requirements.txt 
-   ```
-4. Install brainda package with the editable mode
-   ```sh
-   pip install -e .
-   ```
-## Who are we?
-
-The MetaBCI project is carried out by researchers from 
-- Academy of Medical Engineering and Translational Medicine, Tianjin University, China
-- Tianjin Brain Center, China
+## 2. 新增代码结构
+AssistBCI
+│
+│  README.md
+│  requirements.txt
+│
+├─assistbci_models
+│  ├─classifier						# AssistBCI classifier storage location
+│  └─EmoAdapt
+│      └─0
+│          └─model
+│                  Readme.txt 		# Model download link, and model location
+│
+├─demos
+│  │  EmoAdapt_experiment_train.py	# Training EmoAdapt on .edf files collected from NeuroDance
+│  │  EmoAdapt_predict_offline.py	# Online simulation of proposed core Algorithm
+│  │  EmoAdapt_predict_online.py	# Traditional offline test on extracted features by EmoAdapt
+│  │  EmoAdapt_train.py          # Training EmoAdapt, the self-supervised model, based on SEED
+│  │
+│  ├─brainflow_demos
+│  │      assistbci_worker_test.py      # Easy test of AssistBCI core Algorithm
+│  │      Online_Emotion_experiment.py	 # Including experiment feedback and data saving
+│  ├─brainstim_demos
+│  │      AssistBCI_Backend_v2025.py
+│  │      device_worker.py      # Device and worker manager
+│  │      libvlc.dll             #Requirement of VLC
+│  │      sharedmemory.py		 #Easy tool for system data/flags storage and transmission
+│  │      sharedmemory_ManageTool.py    # Shared Memory management tool
+│  │      stim_demo.py          # Adding Emotion experiment demo
+│  │      workers.py            # AssistBCI Algorithms
+│  │
+│  └─interface
+│          interface_test.py        # Main interface for AssistBCI
+│          mijia_action.py         # A easy API for controlling mijia device by customized shortcut
+│          mijia_connect_home.py	  # A visual interface for creating miji customized shortcut
+│      
+├─metabci
+│  │
+│  ├─brainda
+│  │  │
+│  │  ├─algorithms
+│  │  │  │
+│  │  │  └─self_supervised_learning
+│  │  │          Base.py     # TorchDataset for multiple arrays input (Eg.(x,y, aug_x, aug_y)), │  │  │						 	NTXentLoss, 1d/2d sin cos pos embed
+│  │  │          EmoAdapt.py  		# A self-supervised model
+│  │  │          prototype.py  	# Online learning model
+│  │  │          utils.py			  	# Augment data methods, t-SNE visualization
+│  │  │	
+│  │  ├─datasets
+│  │  │      seed.py.         # Read EEG data in seed dataset
+│  │  │      unlabled_eeg.py.  #Read unlabeld edf files (tested on .edf file saved by NeuroDance)
+│  │  │      __init__.py
+│  │  │
+│  │  ├─paradigms
+│  │  │      emotion.py      #adding emotion paradigms
+│  │  │
+│  │  └─utils
+│  │          download.py  #Fix path bug under windows when local dataset locate at different disc
+│  │								Eg. code/project in E:// while dataset in D://
+│  │
+│  ├─brainflow
+│  │      amplifiers.py.   #Enhance ringbuffer, adding data saving function in Marker, 
+│  │                              fix BaseAmplifier.up_worker, adding Devices: NeuroDance, BlueBCI,
+│  │                              add auto-data-saving in BaseAmplifier after release the worker, 
+│  └─brainstim
+│          framework.py   #Adding allowGUI control (修复)
+│          paradigm.py    #Adding light and virtual tigger support, adding emotion paradim
+│          utils.py        #Adding light and virtual trigger support
+│
+└─vlc
 
 
-## What do we need?
+## 3. 新增功能
 
-**You**! In whatever way you can help.
+| # | Feature Description | Subplatform | Code Path | Classes/Functions |
+|---|----------------------|-------------|-----------|-------------------|
+| 1 | Added BlueBCI/NeuroDance device support | Brainflow | `metabci/brainflow/amplifiers.py` | 1. `BlueBCI()`<br>2. `NeuroDance()` |
+| 2 | Added Marker data saving | Brainflow | `metabci/brainflow/amplifiers.py` | `Marker()` |
+| 3 | Added auto Marker data saving | Brainflow | `metabci/brainflow/amplifiers.py` | `BaseAmplifier.unregister_worker()` (partial) |
+| 4 | Added Emotion/physiological paradigm | Brainstim | `metabci/brainstim/paradigm.py` | 1. `Emotion()`<br>2. `paradigm()` (partial) |
+| 5 | Added phototube/timestamp marking | Brainstim | `metabci/brainstim/utils.py` | 1. `Virtual_trigger()`<br>2. `Light_trigger()` |
+| 6 | Adapted phototube/timestamp marking | Brainstim | `metabci/brainstim/paradigm.py` | `paradigm()` (partial) |
+| 7 | Added Emotion paradigm | Brainda | `metabci/brainda/paradigms/emotion.py` | `Emotion()` |
+| 8 | Added SEED dataset (requires offline data) | Brainda | `metabci/brainda/datasets/seed.py` | `SEED()` |
+| 9 | Added self-supervised model EmoAdapt | Brainda | `metabci/brainda/algorithms/self_supervised_learning/EmoAdapt.py` | `EmoAdapt()` |
+| 10 | Added augmentation methods, t-SNE visualization | Brainda | `metabci/brainda/algorithms/self_supervised_learning/utils.py` | 1. `augment_data()`<br>2. `plot_embedding()` |
+| 11 | Added self-supervised tools: TorchDataset (multi-array input), NTXentLoss, 1d/2d sin cos position encoding | Brainda | `metabci/brainda/algorithms/self_supervised_learning/Base.py` | 1. `TorchDataset()`<br>2. `NTXentLoss()`<br>3. `get_1d_sincos_pos_embed()`<br>4. `get_2d_sincos_pos_embed()` |
+| 12 | Added unlabeled .edf file reading | Brainda | `metabci/brainda/datasets/unlabled_eeg.py` | `unLabeled_EEG()` |
+| 13 | Added online adaptive classifier | Brainda | `metabci/brainda/algorithms/self_supervised_learning/prototype.py` | 1. `PCA_classifier()`<br>2. `PCA_EmoAdapt_online()` |
+| 14 | Added Mi Home device control | General | `metabci/utils/mijia_action.py` | `execute_state_actions()` |
+| 15 | Added visual Mi Home shortcut setup | General | `metabci/utils/mijia_connect_home.py` | `Mijia_home()` |
+| 16 | Added Mmap-based shared memory | General | `metabci/utils/sharedmemory.py` | `SharedDict()` |
+| 17 | Added shared memory visual management tool | General | `metabci/utils/sharedmemory_ManageTool.py` | `SharedMemoryViewer()` |
 
-We need expertise in programming, user experience, software sustainability, documentation and technical writing and project management.
+### 功能测试
 
-We'd love your feedback along the way.
+1. **Device Testing**  
+   Test results: Stable data reading, marking delay <1ms
 
-## Contributing
+5-6. **Test File**: `demos/brainstim_demos/light_virtual_trigger_test.py`  
+   Results: Stable operation, virtual trigger sync speed near memory speed, light trigger sync stable
 
-Contributions are what make the open source community such an amazing place to be learn, inspire, and create. **Any contributions you make are greatly appreciated**. Especially welcome to submit BCI algorithms.
+7-11. **Test File**: `demos/EmoAdapt_predict_online.py`  
+   Notes: Provides 4/8 channel models - check model path and data channels in `get_args()`  
+   Results: Correct data reading, good t-SNE visualization, 92.5% cross-session accuracy after self-supervised training (4-channel)
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+12. **Test File**: `demos/EmoAdapt_experiment_train.py`  
+   Results: Normal data reading
 
-## License
+13. **PCA_classifier() Test File**: `demos/EmoAdapt_predict_online.py`  
+   Results: Works normally with high prediction accuracy
 
-Distributed under the GNU General Public License v2.0 License. See `LICENSE` for more information.
+13. **PCA_EmoAdapt_classifier() Test File**: `demos/brainflow_demos/assistbci_worker_test.py`  
+   Notes: Use ≥8 channel model/device, adjust channel mapping in `workers.py` for best performance  
+   Results: Algorithm works normally
 
-## Contact
+14-15. **Test Files**: Run corresponding files (run 15 first to setup shortcuts)  
+   Notes: Test data pre-saved in `assistbci_models/classifier/` - delete manually before testing to enable neutral state pre-training  
+   Results: Normal Mi Home login, state reading, shortcut creation, device control
 
-Email: TBC_TJU_2022@163.com
+16-17. **Test Files**: Run corresponding files  
+   Results: Normal read/write, memory expansion works, visual management functions work
 
-## Acknowledgements
-- [MNE](https://github.com/mne-tools/mne-python)
-- [MOABB](https://github.com/NeuroTechX/moabb)
-- [pyRiemann](https://github.com/alexandrebarachant/pyRiemann)
-- [TRCA/eTRCA](https://github.com/mnakanishi/TRCA-SSVEP)
-- [EEGNet](https://github.com/vlawhern/arl-eegmodels)
-- [RPA](https://github.com/plcrodrigues/RPA)
-- [MEKT](https://github.com/chamwen/MEKT)
+## 4. 修改与优化
+
+| # | Fix Description | Subplatform | Code Path | Classes/Functions |
+|---|------------------|-------------|-----------|-------------------|
+| 1 | Fixed Windows path issue when data/program on different drives | Brainda | `metabci/brainda/utils/download.py` | `_get_file()` |
+| 2 | Improved Ringbuffer functionality | Brainflow | `metabci/brainflow/amplifiers.py` | `RingBuffer.isEmpty()` |
+| 3 | Fixed BaseAmplifier.up_worker() naming issue (all workers named "feedback_worker") | Brainflow | `metabci/brainflow/amplifiers.py` | `BaseAmplifier.up_worker()` |
+| 4 | Enhanced Experiment GUI window control | Brainstim | `metabci/brainstim/framework.py` | `Experiment.get_window()` |
+| 5 | Improved device/algorithm encapsulation | Brainflow | `metabci/brainflow_demos/device_worker.py` | `Device()` |
+
+### 修改与优化测试
+
+1. **Test Case**:  
+   Place dataset and project on different Windows drives - error occurs with modification commented out, works normally when uncommented  
+   Error screenshot (cause: src_file missing drive path)
+
+2-4. No testing needed (simple modifications)
+
+5. **Test Program**: `demos/brainflow_demos/AssistBCI_Backend_v2025.py`  
+   Notes: Adjust default config based on devices/algorithms, or modify via shared memory management tool after startup
+
