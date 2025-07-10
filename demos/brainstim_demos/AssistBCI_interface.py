@@ -209,11 +209,15 @@ class ElegantNotification(QWidget):
     def leaveEvent(self, event):
         """鼠标离开通知区域"""
         self.user_interacting = False
-        # 如果操作已完成，则关闭通知
-        # if self.operation_completed:
-        self.close_timer.start(1000)
-        # self.close_notification()
         super().leaveEvent(event)
+
+    def changeEvent(self, event):
+        if event.type() == QEvent.ActivationChange:
+            if not self.isActiveWindow():
+                self.close_notification()
+        super().changeEvent(event)
+
+
 
     def complete_operation(self):
         """标记操作已完成"""

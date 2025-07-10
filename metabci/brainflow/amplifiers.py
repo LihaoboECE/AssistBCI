@@ -126,6 +126,8 @@ class Marker(RingBuffer):
         #assistbci-v2024-v2025
         '''
         self.info = info
+        if 'subject' not in self.info.keys():
+            self.info['subject'] = 's0'
         self.info['events'] = self.events
         self.save_data = save_data
         self.raw_data = {}

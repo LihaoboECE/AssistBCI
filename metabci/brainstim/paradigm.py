@@ -2544,7 +2544,7 @@ class Emotion:
             indexs = self.DEFAULT_RATINGS[rating]
         else:
             AttributeError("Rating Type Error")
-
+        self.win.flip()
         scores = {}
         for index in indexs:
             self.show_message(f"{title}\n{index}\n请按1-9评分", wait_for_space=False)
@@ -2606,7 +2606,7 @@ class Emotion:
         # stimulus_files = self.experiment_params.get("stimulus_files") or {}
         video_url = stimulus_params["url"]
         self.ask_ready("视频观看实验")
-        self.show_message("请在浏览器观看视频，结束后返回本窗口评分", wait_for_space=False)
+        self.show_message("请观看视频，结束后返回本窗口评分", wait_for_space=False)
 
         if self.port:  #视频开始的时候打trigger, setData(label)
             self.play_video_from_url(video_url, self.port, label)
@@ -2623,6 +2623,7 @@ class Emotion:
     def play_music_and_image(self, name, label, stimulus_params):
         music_file = stimulus_params.get("music")
         image_file = stimulus_params.get("image")
+        duration = stimulus_params.get("music_duration")
         self.ask_ready("音频刺激实验")
         image_stim = visual.ImageStim(self.win, image=image_file)
         image_stim.draw()
@@ -2634,7 +2635,8 @@ class Emotion:
         pygame.mixer.music.play()
 
         # 在游戏循环中处理音乐结束事件1
-        while pygame.mixer.music.get_busy() and not keyboard.is_pressed('esc'):
+        Start_time = time.time()
+        while pygame.mixer.music.get_busy() and not keyboard.is_pressed('esc') and time.time()-Start_time < duration:
             if self.port is not None:
                 self.port.setData(label)
                 time.sleep(self.trigger_interval)
@@ -2699,7 +2701,7 @@ class Emotion:
             self.win.color = [0.3, 0.3, 0.3]
             if self.port: self.port.setData(0)
 
-            self.show_message(f"Trial {trial + 1} Rating\n请如实评价你的紧张/不安程度", wait_for_space=False, color='red', height=0.07)
+            self.show_message(f"Trial {trial + 1} Rating\n请如实评价你的紧张/不安程度", wait_for_space=False, color='red')
             core.wait(1)
             scores = self.show_rating_window(["Tension", "Uncertainty"], title=f"Trial {trial + 1} Rating")
             scores["Image"] = img_file

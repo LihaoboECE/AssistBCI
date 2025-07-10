@@ -52,37 +52,36 @@ if __name__ == "__main__":
             "video 1": "play_mp4",
             "video 2": "play_mp4",
             "music 1": "play_music_and_image",
-            "thermal 1": "thermal_stimulus",},
+            "thermal 1": "thermal_stimulus",
+            "anxiety 1": "anxiety_paradigm"
+        },
 
         "experiment_Stimulus": {
             "video 1": {
                 "rating": "VA",  # "DP": depression or "VA": Valence-Arousal
-                "url": "C:\\Users\\m1358\\Desktop\\01人再囧途之泰囧_2.mp4"},
+                "url": "materials/测试视频.mp4"},
 
             "video 2": {
-                "rating": "VA",  # "DP": depression or "VA": Valence-Arousal
+                "rating": "DP",  # "DP": depression or "VA": Valence-Arousal
                 "url": "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"},
 
             "music 1": {
                 "music_duration": 20, "rating": ["Sadness", "Depression", "Empathy"],
-                "music": "12345.mp3",
-                "image": "R.jpg"},
+                "music": "materials/出羽良彰 - Wheatfield with you.mp3",
+                "image": "materials/测试图片.jpeg"},
 
             "thermal 1": {
                 "thermal_stimulus_duration": 10},
 
+            "anxiety 1": {
+                "trial_count": 5,
+                "threat_images": ["materials/蛇.jpg", "materials/蜘蛛.jpg"],
+                "neutral_images": ["materials/长白山.jpg", "materials/测试图片.jpeg"],
+                "alarm_sound": "materials/晨曦 - 空袭警报声.mp3", }
 
         }
 
     }
-    '''
-    "anxiety 1": "anxiety_paradigm"
-    "anxiety 1": {
-                "trial_count": 5,
-                "threat_images": ["01.png", "02.png"],
-                "neutral_images": ["03.png", "04.png"],
-                "alarm_sound": "wind-artificial-18750.mp3", }
-    '''
 
     # 初始化 Emotion 实验
     emotion_obj = Emotion(win=win, trigger_interval=5, **emotion_params)
