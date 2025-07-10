@@ -11,81 +11,100 @@ EEG的状态监测受限于诱发范式，存在标记被动、场景适应性�
 **关键词: 特征提取，多维度生理与情感状态监测，个性化标注，轻量级交互，智能家居**
 
 ## 运行方法：
+
+### 环境安装：
+
+      pip install -r requirements.txt
+
 ### AssistBCI:
-    同时运行 `demos/brainflow_demos/AssistBCI_Backend_v2025.py` 与 'demos/brainstim_demos/AssistBCI_interface.py'
+同时运行
+
+    demos/brainflow_demos/AssistBCI_Backend_v2025.py
+    demos/brainstim_demos/AssistBCI_interface.py
 ### EmoAdapt:
-    模型训练 'demos/EmoAdapt_train.py'
-    模型常规线下测试 'demos/EmoAdapt_predict_offline.py'
-    模型模拟线上测试 ‘demos/EmoAdapt_predict_online.py’
+模型训练
+            
+      demos/EmoAdapt_train.py
+模型常规线下测试
+            
+      demos/EmoAdapt_predict_offline.py
+模型模拟线上测试
+
+      demos/EmoAdapt_predict_online.py
 
 ## 2. 新增代码结构
-AssistBCI/
-│
-├── README.md # Project overview and documentation
-├── requirements.txt # Python dependencies
-│
-├── assistbci_models/ # Model storage
-│ ├── classifier/ # AssistBCI classifier storage
-│ └── EmoAdapt/
-│ └── 0/
-│ └── model/
-│ └── Readme.txt # Model download instructions
-│
-├── demos/ # Demonstration scripts
-│ ├── EmoAdapt_experiment_train.py # Train EmoAdapt on NeuroDance .edf files
-│ ├── EmoAdapt_predict_offline.py # Online simulation of core algorithm
-│ ├── EmoAdapt_predict_online.py # Offline test on EmoAdapt features
-│ ├── EmoAdapt_train.py # Train self-supervised model on SEED dataset
-│ │
-│ ├── brainflow_demos/
-│ │ ├── AssistBCI_Backend_v2025.py # Backend implementation
-│ │ ├── assistbci_worker_test.py # Core algorithm test
-│ │ ├── Online_Emotion_experiment.py # Experiment with feedback & data saving
-│ │ ├── workers.py # AssistBCI algorithms
-│ │ └── device_worker.py # Device and worker manager
-│ │
-│ └── brainstim_demos/
-│ ├── libvlc.dll # VLC requirement
-│ ├── stim_demo.py # Emotion experiment demo
-│ ├── AssistBCI_interface.py # Main interface
-│ └── light_virtual_trigger_test.py # Light/virtual trigger test
-│
-├── metabci/ # Core modules
-│ ├── utils/
-│ │ ├── mijia_action.py # API for mijia device control
-│ │ ├── mijia_connect_home.py # Visual interface for mijia shortcuts
-│ │ ├── sharedmemory.py # System data/flags storage
-│ │ ├── sharedmemory_ManageTool.py # Shared memory management
-│ │ └── init.py
-│ │
-│ ├── brainda/
-│ │ ├── algorithms/
-│ │ │ └── self_supervised_learning/
-│ │ │ ├── Base.py # TorchDataset, NTXentLoss, position embeddings
-│ │ │ ├── EmoAdapt.py # Self-supervised model
-│ │ │ ├── prototype.py # Online learning model
-│ │ │ └── utils.py # Data augmentation, t-SNE visualization
-│ │ │
-│ │ ├── datasets/
-│ │ │ ├── seed.py # SEED dataset EEG reader
-│ │ │ ├── unlabled_eeg.py # Unlabeled .edf reader (NeuroDance)
-│ │ │ └── init.py
-│ │ │
-│ │ ├── paradigms/
-│ │ │ └── emotion.py # Emotion paradigms
-│ │ │
-│ │ └── utils/
-│ │ └── download.py # Path bug fix for Windows datasets
-│ │
-│ ├── brainflow/
-│ │ └── amplifiers.py # Enhanced ringbuffer, device support
-│ │
-│ └── brainstim/
-│ ├── framework.py # GUI control fixes
-│ ├── paradigm.py # Trigger support, emotion paradigm
-│ └── utils.py # Light/virtual trigger support
-│
-└── vlc/ # VLC related files
+
+   ```
+   AssistBCI/
+   │
+   ├── README.md
+   ├── requirements.txt
+   │
+   ├── assistbci_models/
+   │   ├── classifier/                     # AssistBCI classifier storage location
+   │   └── EmoAdapt/
+   │       └── 0/
+   │           └── model/
+   │               └── Readme.txt          # Model download link, and model location
+   │
+   ├── demos/
+   │   ├── EmoAdapt_experiment_train.py    # Training EmoAdapt on .edf files collected from NeuroDance
+   │   ├── EmoAdapt_predict_offline.py     # Online simulation of proposed core Algorithm
+   │   ├── EmoAdapt_predict_online.py      # Traditional offline test on extracted features by EmoAdapt
+   │   ├── EmoAdapt_train.py               # Training EmoAdapt, the self-supervised model, based on SEED
+   │   │
+   │   ├── brainflow_demos/
+   │   │   ├── AssistBCI_Backend_v2025.py
+   │   │   ├── assistbci_worker_test.py    # Easy test of AssistBCI core Algorithm
+   │   │   ├── Online_Emotion_experiment.py # Including experiment feedback and data saving
+   │   │   ├── workers.py                  # AssistBCI Algorithms
+   │   │   └── device_worker.py            # Device and worker manager
+   │   │
+   │   └── brainstim_demos/
+   │       ├── libvlc.dll                  # Requirement of VLC
+   │       ├── stim_demo.py                # Adding Emotion experiment demo
+   │       ├── AssistBCI_interface.py      # Main interface for AssistBCI
+   │       └── light_virtual_trigger_test.py  # Test file for light/virtual trigger
+   │
+   ├── metabci/
+   │   ├── utils/
+   │   │   ├── mijia_action.py             # A easy API for controlling mijia device by customized shortcut
+   │   │   ├── mijia_connect_home.py       # A visual interface for creating miji customized shortcut
+   │   │   ├── sharedmemory.py             # Easy tool for system data/flags storage and transmission
+   │   │   ├── sharedmemory_ManageTool.py  # Shared Memory management tool
+   │   │   └── __init__.py
+   │   │
+   │   ├── brainda/
+   │   │   ├── algorithms/
+   │   │   │   └── self_supervised_learning/
+   │   │   │       ├── Base.py             # TorchDataset for multiple arrays input (Eg.(x,y, aug_x, aug_y)), NTXentLoss, 1d/2d sin cos pos embed
+   │   │   │       ├── EmoAdapt.py         # A self-supervised model
+   │   │   │       ├── prototype.py        # Online learning model
+   │   │   │       └── utils.py            # Augment data methods, t-SNE visualization
+   │   │   │
+   │   │   ├── datasets/
+   │   │   │   ├── seed.py                 # Read EEG data in seed dataset
+   │   │   │   ├── unlabled_eeg.py         # Read unlabeld edf files (tested on .edf file saved by NeuroDance)
+   │   │   │   └── __init__.py
+   │   │   │
+   │   │   ├── paradigms/
+   │   │   │   └── emotion.py              # Adding emotion paradigms
+   │   │   │
+   │   │   └── utils/
+   │   │       └── download.py             # Fix path bug under windows when local dataset locate at different disc (Eg. code/project in E:// while dataset in D://)
+   │   │
+   │   ├── brainflow/
+   │   │   └── amplifiers.py               # Enhance ringbuffer, adding data saving function in Marker, fix BaseAmplifier.up_worker, adding Devices: NeuroDance, BlueBCI, add auto-data-saving in BaseAmplifier after release the worker
+   │   │
+   │   └── brainstim/
+   │       ├── framework.py                # Adding allowGUI control (修复)
+   │       ├── paradigm.py                 # Adding light and virtual tigger support, adding emotion paradim
+   │       └── utils.py                    # Adding light and virtual trigger support
+   │
+   └── vlc/```
+   
+
+
 
 ## 3. 新增功能
 
