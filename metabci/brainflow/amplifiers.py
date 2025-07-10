@@ -23,7 +23,7 @@ from .workers import ProcessWorker
 
 
 from neuro_dance.nd_device_process import NdDeviceBase
-from demos.brainstim_demos.sharedmemory import SharedDict
+from metabci.utils.sharedmemory import SharedDict
 from multiprocessing import Lock
 from pylsl.pylsl import StreamInlet, resolve_byprop
 

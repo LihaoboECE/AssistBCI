@@ -32,7 +32,7 @@ class unLabeled_EEG(BaseDataset):
     D: downsampling ratio
     '''
 
-    def __init__(self, data_paths=[], win_duration=3, drate=200, D=5):
+    def __init__(self, data_paths=[], win_duration=3, drate=200, D=5, channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]):
         for path in data_paths:
             if not os.path.exists(path):
                 raise (FileNotFoundError(["Error Dataset: ", path]))
@@ -52,7 +52,7 @@ class unLabeled_EEG(BaseDataset):
 
         self.D = D
 
-        self._CHANNELS = ["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+        self._CHANNELS = channels
 
         self._EVENTS = {'unknown': (1, (0, self.duration))}
 

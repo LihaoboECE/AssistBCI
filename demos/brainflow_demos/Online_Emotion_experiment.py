@@ -9,7 +9,7 @@ import time
 from pylsl import StreamInfo, StreamOutlet
 from metabci.brainflow.amplifiers import Marker, NeuroDance
 from metabci.brainflow.workers import ProcessWorker
-from demos.brainstim_demos.sharedmemory import SharedDict
+from metabci.utils.sharedmemory import SharedDict
 import numpy as np
 
 class FeedbackWorker(ProcessWorker):
@@ -47,8 +47,8 @@ class FeedbackWorker(ProcessWorker):
         p_labels = 1
         print('return fake predict id', p_labels)
 
-        while not self.outlet.have_consumers():
-            time.sleep(0.1)
+        # while not self.outlet.have_consumers():
+        #     time.sleep(0.1)
         self.outlet.push_sample([p_labels])
         print("predict label pushed")
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
     # Set NeuroDance parameters
     dict = SharedDict()
 
-    dv = NeuroDance(device_address=("10.8.52.9", 8899),
+    dv = NeuroDance(device_address=("127.0.0.1", 8899),
                     srate=srate,
                     dict=dict) #用于Virtual_trigger
 
@@ -99,7 +99,7 @@ if __name__ == '__main__':
 
     input('press any key to close\n')
 
-    marker.save_as_mat() #保存数据
+    # marker.save_as_mat() #保存数据
 
     dv.down_worker('feedback_worker')
     time.sleep(1)

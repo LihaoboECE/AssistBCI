@@ -32,7 +32,7 @@ Email: lihaoboece@gmail.com
 DEFAULT_DEVICE_CUSTOM_PATH = os.path.join(os.path.expanduser("~"), ".assistbci_config")
 DEFAULT_MIJIA_USER_PATH = os.path.join(os.path.expanduser("~"), ".assistbci_config", "mijia-api-auth.json")
 DEFAULT_SETTINGS_PATH = os.path.join(DEFAULT_DEVICE_CUSTOM_PATH, "device_mapping.json")
-CLASSIFIER_DATA_PATH = os.path.join('..', '..', 'assistbci_models', 'classifier')
+CLASSIFIER_DATA_PATH = os.path.join('../../demos', '..', 'assistbci_models', 'classifier')
 
 class LoginDialog(QDialog): #米家账号登陆
     def __init__(self, parent=None):
@@ -1071,6 +1071,7 @@ class Mijia_home(QMainWindow):
             if bubble.devices:
                 settings[bubble.name] = bubble.devices
         return settings
+
 
     @staticmethod
     def get_state():

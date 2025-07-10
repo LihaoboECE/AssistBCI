@@ -16,12 +16,7 @@ from copy import copy
 import random
 from scipy import signal
 from PIL import Image
-'''
-used for Emotion paradigm
-Author: Li Haobo
-Email: lihaoboece@gmail.com
-#assistBCI-v2025
-'''
+
 import time
 import datetime
 import tkinter as tk
@@ -31,6 +26,14 @@ from pathlib import Path
 vlc_path = os.path.join(Path(__file__).parent.parent.parent, "vlc")
 os.add_dll_directory(vlc_path)  # 直接使用相对路径
 import vlc
+
+'''
+used for Emotion paradigm
+Author: Li Haobo
+Email: lihaoboece@gmail.com
+#assistBCI-v2025
+'''
+
 
 
 
@@ -2467,13 +2470,14 @@ class Emotion:
             root.protocol("WM_DELETE_WINDOW", on_closing)
 
             # 创建数据显示标签
-            data_font = tk.font.Font(family="Consolas", size=12, weight="normal")
+            # data_font = tk.font.Font(family="Consolas", size=12, weight="normal")
+            # data_font = tk.font.Font(family="Consolas", size=12, weight="normal")
             data_label = tk.Label(
                 root,
                 text="等待数据...",
                 fg="white",
                 bg="black",
-                font=data_font,
+                # font=data_font,
                 justify=tk.LEFT
             )
             data_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
@@ -2504,6 +2508,7 @@ class Emotion:
 
 
         # 在子线程中创建窗口
+        inlet.pull_sample(timeout=0)
         window_thread = threading.Thread(target=create_window, daemon=True)
         window_thread.start()
         # self.data_window = root  # 注意：这里需要特殊处理，实际实现可能需要调整
@@ -3618,6 +3623,7 @@ def paradigm(
         if port:
             port.setData(0)
             if inlet:
+
                 VSObject.start_live_data(inlet)
 
         for name in VSObject.block_name:
@@ -3626,9 +3632,9 @@ def paradigm(
             VSObject.show_message(f"即将开始：{name}", wait_for_space=False, color='yellow')
             experiment_params = VSObject.experiment_params[name]
             core.wait(1)
-            start_time = datetime.now()
+            start_time = datetime.datetime.now()
             method(name, VSObject.trigger_labels[name], experiment_params)
-            end_time = datetime.now()
+            end_time = datetime.datetime.now()
             # 子实验结束提示
             duration = (end_time - start_time).total_seconds()
             VSObject.show_message(f"{name} 已结束\n用时: {duration:.1f} 秒", wait_for_space=False, color='green')

@@ -12,7 +12,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import accuracy_score, f1_score
 import os
 from metabci.brainda.algorithms.self_supervised_learning.Base import MaskedAutoEncoderViT, NTXentLoss, TorchDataset, SimplifiedResnet
-from metabci.brainda.algorithms.self_supervised_learning.utils import compute_psd_de, augment_data
+from metabci.brainda.algorithms.self_supervised_learning.utils import augment_data
 
 
 
@@ -187,24 +187,11 @@ class EmoAdapt(nn.Module):
     def fit(self, x: np.ndarray, y: np.ndarray, validation_x: np.ndarray, validation_y: np.ndarray):
         aug_x, origin_x, original_y = augment_data(x, y)
 
-        # aug_x, origin_x, original_y = x, x, y
-
-        # time_sequence = np.arange(origin_x.shape[0])
-        # time_sequence = torch.tensor(time_sequence, dtype=torch.float32)
-
         aug_x, origin_x, original_y = torch.tensor(aug_x, dtype=torch.float32), \
             torch.tensor(origin_x, dtype=torch.float32), torch.tensor(original_y, dtype=torch.long)
 
-        # aug_x, origin_x, y = aug_x.to(self.device), origin_x.to(self.device), y.to(self.device)
-
         train_dataset = TorchDataset(aug_x, origin_x, original_y)
         train_dataloader = DataLoader(train_dataset, batch_size=self.train_batch_size, shuffle=True)
-
-        # train_x, train_y = torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.long)
-        # train_dataset = TorchDataset(train_x, train_y)
-        # train_dataloader = DataLoader(train_dataset, batch_size=self.train_batch_size, shuffle=True,
-        #                                   drop_last=False)
-
 
         train_x, train_y = torch.tensor(x, dtype=torch.float32), torch.tensor(y, dtype=torch.long)
         train_val_dataset = TorchDataset(train_x, train_y)
@@ -219,7 +206,6 @@ class EmoAdapt(nn.Module):
         self.save_model(model=best_model)
 
         val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader)
-        # val_acc, val_mf1 = self.ML_probing(train_dataloader, val_dataloader)
 
         print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
             -1, val_acc * 100, val_mf1 * 100))
@@ -231,23 +217,13 @@ class EmoAdapt(nn.Module):
             self.optimizer.zero_grad()
 
             for x, x_o, _ in train_dataloader:
-            # for num, (x, _) in enumerate(train_dataloader):
-                # x, x_o = augment_data(x.detach().numpy())
-                # x, x_o = torch.tensor(x, dtype=torch.float32), torch.tensor(x_o, dtype=torch.float32)
                 x, x_o = x.to(self.device), x_o.to(self.device)
-                # t = t.to(self.device)
 
                 out = self.forward(x, x_o, mask_ratio=self.mask_ratio)
                 recon_loss, contrastive_loss, (cl_labels, cl_logits) = out
 
                 loss = recon_loss + self.alpha * contrastive_loss
 
-                # if recon_loss > contrastive_loss :
-                #     recon_loss.backward()
-                # else:
-                #     contrastive_loss.backward()
-
-                # if num % 5 == 0:
                 loss.backward()
                 self.optimizer.step()
                 self.optimizer.zero_grad()
@@ -263,15 +239,14 @@ class EmoAdapt(nn.Module):
                 total_step += 1
 
             if (epoch + 1) % 1 == 0:
-                val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader) ######
-                # val_acc, val_mf1 = self.ML_probing(train_dataloader, val_dataloader)
+                val_acc, val_mf1 = self.ML_probing(train_val_dataloader, val_dataloader)
 
-                if val_mf1 > best_score:  ######
+                if val_mf1 > best_score:
                     best_model = copy.deepcopy(self)
                     best_score = val_mf1
 
                 print('[Epoch] : {0:03d} \t [Accuracy] : {1:2.4f} \t [Macro-F1] : {2:2.4f} \n'.format(
-                    epoch, val_acc * 100, val_mf1 * 100)) ######
+                    epoch, val_acc * 100, val_mf1 * 100))
 
                 self.optimizer.zero_grad()
                 self.scheduler.step()
@@ -293,26 +268,6 @@ class EmoAdapt(nn.Module):
         return frame
 
 
-    def get_feature(self, x: torch.Tensor):
-        '''
-        Parameters
-        ----------
-        x
-        Returns
-        -------
-        features (psd, de, time domain features)
-        '''
-        feature_gather = []
-        device = x.device
-        for data in x:
-            data = data.to('cpu').numpy()
-            psd, de, other = compute_psd_de(data, 1, self.fs) #1s window
-            psd, de, other = psd.reshape([psd.shape[0], -1]), de.reshape([de.shape[0], -1]), other.reshape([other.shape[0], -1])
-            feature_gather.append(np.concatenate((psd, de, other), axis=-1))
-
-        feature_gather = torch.from_numpy(np.stack(feature_gather)).to(device).float()
-        return feature_gather
-
     @staticmethod
     def forward_mae_loss(real: torch.Tensor,
                          pred: torch.Tensor,
@@ -325,7 +280,6 @@ class EmoAdapt(nn.Module):
         loss = (pred - real) ** 2
         loss = loss.mean(dim=-1)
         loss = (loss * mask).sum() / mask.sum()
-        # return torch.round(loss * 1e-15 * 10000) / 10000
         return loss
 
     @staticmethod
@@ -368,18 +322,6 @@ def token_len(fs, second, time_window, time_step, channels=2):
             frame.append(sample)
     frame = np.stack(frame, axis=1)
     return frame.shape[0] * frame.shape[1], frame.shape[2]
-
-
-def model_size(model):
-    size_model = 0
-    for param in model.parameters():
-        if param.data.is_floating_point():
-            size_model += param.numel() * torch.finfo(param.data.dtype).bits
-        else:
-            size_model += param.numel() * torch.iinfo(param.data.dtype).bits
-    mb_size = size_model / 8e6
-    return mb_size
-
 
 
 

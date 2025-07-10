@@ -1,11 +1,8 @@
-from abc import abstractmethod
-from typing import Optional, Any
-from typing import Union, Optional, Dict, List, Tuple
-from multiprocessing import Process, Lock ,Event, Queue, Manager
+from multiprocessing import Process
 from metabci.brainflow.amplifiers import NeuroScan, BlueBCI, Curry8, Neuracle, NeuroDance
 from metabci.brainflow.amplifiers import Marker
 from workers import EmptyWorker, ConditionWorker
-from demos.brainstim_demos.sharedmemory import SharedDict
+from metabci.utils.sharedmemory import SharedDict
 
 '''
 Device and worker management

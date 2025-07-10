@@ -8,9 +8,7 @@ import argparse
 from metabci.brainda.algorithms.self_supervised_learning import EmoAdapt
 from scipy import signal
 
-
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -19,9 +17,9 @@ def get_args():
     parser.add_argument('--fs', default=200, type=int)
 
     # Train Hyperparameter
-    parser.add_argument('--seed', default=777, type=int)  # 30
-    parser.add_argument('--train_epochs', default=300, type=int) #30
-    parser.add_argument('--train_learning_rate', default=125e-6, type=float) #5e-5
+    parser.add_argument('--seed', default=777, type=int)
+    parser.add_argument('--train_epochs', default=300, type=int)
+    parser.add_argument('--train_learning_rate', default=125e-6, type=float)
     parser.add_argument('--train_batch_size', default=64, type=int)
 
     # Model Hyperparameter
@@ -35,11 +33,11 @@ def get_args():
     parser.add_argument('--encoder_depths', default=4, type=int)
     parser.add_argument('--decoder_embed_dim', default=256, type=int)
     parser.add_argument('--decoder_heads', default=8, type=int)
-    parser.add_argument('--decoder_depths', default=3, type=int) #3
+    parser.add_argument('--decoder_depths', default=3, type=int)
     parser.add_argument('--alpha', default=1, type=float)
 
-    parser.add_argument('--projection_hidden', default=[1024, 512], type=list)#[1024, 512]
-    parser.add_argument('--temperature', default=0.05, type=float) #0.05
+    parser.add_argument('--projection_hidden', default=[1024, 512], type=list)
+    parser.add_argument('--temperature', default=0.05, type=float)
     parser.add_argument('--mask_ratio', default=0.8, type=float)
     parser.add_argument('--print_point', default=5, type=int)
     parser.add_argument('--ckpt_path', default=os.path.join('..', 'models'), type=str)
@@ -47,8 +45,9 @@ def get_args():
     return parser.parse_args()
 
 ##cross session
-
-train_dataset = unLabeled_EEG(data_paths=['E:/2025comp/7_7datasetLHB/PPE-1.edf', 'E:/2025comp/7_7datasetLHB/PPE-2.edf'], win_duration=5, drate=200, D=5)
+channels = ["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+data_paths = ['E:/2025comp/7_7datasetLHB/PPE-1.edf', 'E:/2025comp/7_7datasetLHB/PPE-2.edf']
+train_dataset = unLabeled_EEG(data_paths=data_paths, win_duration=5, drate=200, D=5, channels=channels)
 
 paradigm = Emotion(
     srate=200,

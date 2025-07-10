@@ -4,7 +4,9 @@ from sklearn.covariance import LedoitWolf
 from scipy.spatial.distance import cdist, mahalanobis
 from collections import defaultdict
 
-
+'''
+Pure prototype classifier
+'''
 class PCA_classifier:
     def __init__(self, n_features, pca_patch_max_len=20, max_buf_size=50,
                  min_samples_per_class=15, adjustment_step=0.1, max_adjustment=10.0):
@@ -176,7 +178,7 @@ class PCA_classifier:
         self.threshold_in_class[k] = q3
 
         # 确保阈值不为负
-        # self.threshold_in_class[k] = max(0, self.threshold_in_class[k])
+        self.threshold_in_class[k] = max(0, self.threshold_in_class[k])
 
     def error_pred_feedback(self, label):
         """错误预测反馈"""
@@ -299,7 +301,9 @@ class PCA_classifier:
         state['last_detection'] = self.sample_counter
 
 
-
+'''
+backbone+prototype classifier
+'''
 class PCA_EmoAdapt_online:
     def __init__(self, backbone, n_features, device, original_buf_EEG=None, buf_labels=None,
                  pca_patch_max_len=20, max_buf_size=50,

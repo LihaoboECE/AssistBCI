@@ -4,7 +4,7 @@ import time
 from mijiaAPI import mijiaAPI, mijiaDevice
 
 # 全局配置文件路径
-from demos.interface.mijia_connect_home import DEFAULT_DEVICE_CUSTOM_PATH, DEFAULT_MIJIA_USER_PATH, DEFAULT_SETTINGS_PATH
+from metabci.utils.mijia_connect_home import DEFAULT_MIJIA_USER_PATH, DEFAULT_SETTINGS_PATH
 
 
 '''
@@ -115,5 +115,5 @@ def execute_state_actions(state_label, settings_path=DEFAULT_SETTINGS_PATH, auth
 
 # 示例使用方式
 if __name__ == "__main__":
-    # 执行"放松"状态的所有操作
-    execute_state_actions("热")
+    # 执行"中性"状态的所有操作
+    execute_state_actions("中性")

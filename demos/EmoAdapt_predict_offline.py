@@ -70,7 +70,7 @@ def get_args(file_name):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--n_fold', default=0, type=int)
-    parser.add_argument('--ckpt_path', default=os.path.join('..', 'models_buf', file_name), type=str)
+    parser.add_argument('--ckpt_path', default=os.path.join('..', 'assistbci_models', file_name), type=str)
     return parser.parse_args()
 
 dataset_path = 'E:\SEED'
@@ -79,14 +79,14 @@ train_dataset = SEED(path=dataset_path, win_duration=5, sessions=[0])
 
 paradigm = Emotion(
     srate=200,
-    channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+    # channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]  #for 8-ch model
+    channels=["FP1", "C5", "CP3", "P4"]                            #for 4-ch model
 )
 
 
 X_train, Y_train, _ = paradigm.get_data(
     train_dataset,
-    # subjects=[i+1 for i in range(15)],
-    subjects=[2],
+    subjects=[i+1 for i in range(15)],
     return_concat=True,
     n_jobs=5,
     verbose=False)
@@ -96,13 +96,13 @@ test_dataset = SEED(path=dataset_path, win_duration=5, sessions=[1])
 
 paradigm = Emotion(
     srate=200,
-    channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+    # channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+    channels=["FP1", "C5", "CP3", "P4"]
 )
 
 X_test, Y_test, _ = paradigm.get_data(
     test_dataset,
-    # subjects=[i+1 for i in range(15)],
-    subjects=[2],
+    subjects=[i+1 for i in range(15)],
     return_concat=True,
     n_jobs=5,
     verbose=False)
@@ -125,7 +125,7 @@ test_x, test_y = torch.tensor(X_test, dtype=torch.float32), torch.tensor(Y_test,
 test_dataset = TorchDataset(test_x, test_y)
 test_dataloader = DataLoader(test_dataset, batch_size=64, shuffle=True, drop_last=False)
 
-(latent_train, train_y), (latent_test, test_y) = model.get_latent(train_dataloader), model.get_latent(test_dataloader, disable_BN=True)
+(latent_train, train_y), (latent_test, test_y) = model.get_latent(train_dataloader), model.get_latent(test_dataloader)
 
 print("start T-sne")
 tsne = TSNE(n_components=2, random_state=0, init='pca', perplexity=40)

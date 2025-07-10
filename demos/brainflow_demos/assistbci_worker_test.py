@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import time
 from metabci.brainflow.amplifiers import Marker, NeuroDance
-from demos.brainstim_demos.workers import ConditionWorker
-from demos.brainstim_demos.sharedmemory import SharedDict
+from demos.brainflow_demos.workers import ConditionWorker
+from metabci.utils.sharedmemory import SharedDict
 
 '''
 A simple start up for assistBCI-v2025 worker

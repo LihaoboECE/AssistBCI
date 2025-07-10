@@ -2,12 +2,12 @@ import sys
 import os
 import time
 from PyQt5.QtGui import (QIcon, QPixmap, QFont, QColor, QPainter,
-                         QLinearGradient, QBrush, QPalette)
-from PyQt5.QtCore import (Qt, QSize, QTimer, QPropertyAnimation, QRect,
+                         QLinearGradient, QBrush)
+from PyQt5.QtCore import (Qt, QTimer, QPropertyAnimation, QRect,
                           QPoint, QEasingCurve, pyqtSignal, QEvent)
-from mijia_connect_home import Mijia_home
-from demos.brainstim_demos.sharedmemory import SharedDict
-from demos.brainstim_demos.sharedmemory_ManageTool import SharedMemoryViewer
+from metabci.utils.mijia_connect_home import Mijia_home
+from metabci.utils.sharedmemory import SharedDict
+from metabci.utils.sharedmemory_ManageTool import SharedMemoryViewer
 from PyQt5.QtWidgets import (QApplication, QPushButton, QVBoxLayout,
                              QWidget, QLabel, QHBoxLayout,
                              QFrame, QLineEdit, QComboBox,
@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QVBoxLayout,
                              QListWidget, QSystemTrayIcon, QMenu,
                              QDialog, QCheckBox, QGroupBox, QButtonGroup,
                              QRadioButton)
-from demos.interface.mijia_action import execute_state_actions
+from metabci.utils.mijia_action import execute_state_actions
 import json
 from datetime import datetime, timedelta
 

@@ -18,7 +18,7 @@ from metabci.brainda.paradigms import Emotion
 import argparse
 from metabci.brainda.algorithms.self_supervised_learning.utils import plot_embedding
 from sklearn.manifold import TSNE
-from metabci.brainda.algorithms.self_supervised_learning.GMM_distance import PCA_classifier
+from metabci.brainda.algorithms.self_supervised_learning.prototype import PCA_classifier
 import pandas as pd
 from collections import defaultdict
 
@@ -68,7 +68,7 @@ def get_args(file_name):
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--n_fold', default=0, type=int)
-    parser.add_argument('--ckpt_path', default=os.path.join('..', 'models_buf', file_name), type=str)
+    parser.add_argument('--ckpt_path', default=os.path.join('..', 'assistbci_models', file_name), type=str)
     return parser.parse_args()
 
 
@@ -77,7 +77,8 @@ dataset = SEED(path=dataset_path, win_duration=5, sessions=[2])
 
 paradigm = Emotion(
     srate=200,
-    channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]
+    # channels=["FP1", "FP2", "F7", "F8", "T7", "T8", "P7", "P8"]  # for 8-ch model
+    channels=["FP1", "C5", "CP3", "P4"]                            # for 4-ch model
 )
 
 X, Y, meta = paradigm.get_data(
@@ -104,8 +105,8 @@ plot_embedding(latent_tsne, Y, "Session-2 t-SNE")
 
 # 创建初始GMM模型（1类）
 print("\n##########################模型初始化##########################")
-gmm = PCA_classifier(n_features=5, pca_patch_max_len=20, max_buf_size=50,
-                 min_samples_per_class=15, adjustment_step=0.5, max_adjustment=10.0)
+gmm = PCA_classifier(n_features=10, pca_patch_max_len=20, max_buf_size=50,
+                 min_samples_per_class=20, adjustment_step=0.5, max_adjustment=10.0)
 X_1 = X[Y==1]
 np.random.shuffle(X_1)
 X_1 = X_1[0:12]
@@ -117,9 +118,9 @@ gmm.fit(X_1, np.ones(X_1.shape[0], dtype=int))  # 初始类为1 (中性neutral)
 MIN_DETECTION_INTERVAL = 12  # 最小检测间隔（样本数）
 MIN_ACC_NEW_CLASS = 3
 MAX_BUFFER_SIZE = 3  # 最大缓存样本数
-stop_update_after = 1800 / 5
+stop_update_after = 2000 / 5
 TEST = False # Enable this for offline test after online time
-experiment_time_for_each_trail = int(800 / 5)
+experiment_time_for_each_trail = int(120 / 5)
 
 # 开始实验
 global_cont = 0
@@ -196,7 +197,7 @@ while X.shape[0] >= experiment_time_for_each_trail:
     if TEST:
         # 测试准确率
         print("\n-----测试开始-----")
-        new_class, pred_classes, report = gmm.predict(X[0:experiment_time_for_each_trail, :])
+        new_class, pred_classes, report = gmm.predict(model.predict(X[0:experiment_time_for_each_trail, :]))
         print("预测存在新类：", np.sum(new_class), "次") #最好为0次
         print("报告状态：", np.sum(report), "次")
 

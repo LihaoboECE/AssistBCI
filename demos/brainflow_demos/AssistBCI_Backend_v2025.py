@@ -1,7 +1,4 @@
-import multiprocessing
-import os
-from demos.brainstim_demos.device_worker import Device
-from sharedmemory import SharedDict
+from demos.brainflow_demos.device_worker import Device
 
 '''
 Start assistBCI-v2025 device worker backend

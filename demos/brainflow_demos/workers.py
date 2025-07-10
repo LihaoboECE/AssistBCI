@@ -3,8 +3,8 @@ import numpy as np
 import os
 from scipy.io import loadmat, savemat
 from scipy import signal
-from demos.brainstim_demos.sharedmemory import SharedDict
-from metabci.brainda.algorithms.self_supervised_learning.GMM_distance import PCA_EmoAdapt_online
+from metabci.utils.sharedmemory import SharedDict
+from metabci.brainda.algorithms.self_supervised_learning.prototype import PCA_EmoAdapt_online
 import time
 import torch
 
