@@ -14,6 +14,10 @@ import colorsys
 
 # 导入米家API库
 from mijiaAPI import mijiaLogin, mijiaAPI, mijiaDevice, get_device_info
+from mijiaAPI.login import logger
+from qrcode import QRCode
+import matplotlib.pyplot as plt
+
 from mijiaAPI.apis import mijiaAPI
 from mijiaAPI.devices import mijiaDevice, get_device_info
 from urllib import parse
@@ -33,6 +37,39 @@ DEFAULT_DEVICE_CUSTOM_PATH = os.path.join(os.path.expanduser("~"), ".assistbci_c
 DEFAULT_MIJIA_USER_PATH = os.path.join(os.path.expanduser("~"), ".assistbci_config", "mijia-api-auth.json")
 DEFAULT_SETTINGS_PATH = os.path.join(DEFAULT_DEVICE_CUSTOM_PATH, "device_mapping.json")
 CLASSIFIER_DATA_PATH = os.path.join('../../demos', '..', 'assistbci_models', 'classifier')
+
+
+class _mijiaLogin(mijiaLogin):
+    def __init__(self, save_path):
+        super().__init__(save_path)
+
+    @staticmethod
+    def _print_qr(loginurl: str, box_size: int = 10) -> None:
+        """
+        打印并保存二维码。
+
+        Args:
+            loginurl (str): 包含登录信息的URL。
+            box_size (int, optional): 二维码大小。默认为10。
+        """
+        logger.info('请使用米家APP扫描下方二维码')
+        qr = QRCode(border=1, box_size=box_size)
+        qr.add_data(loginurl)
+        img = qr.make_image()
+        img_array = np.array(img)
+        plt.ion()
+        plt.imshow(img_array, cmap='gray')
+        plt.axis('off')  # 不显示坐标轴
+        plt.pause(0.1)
+        try:
+            qr.print_ascii(invert=True, tty=True)
+        except OSError:
+            qr.print_ascii(invert=True, tty=False)
+            logger.info('如果无法扫描二维码，'
+                        '请更改终端字体，'
+                        '如"Maple Mono"、"Fira Code"等。\n'
+                        '或者直接使用当前目录下的qr.png文件。')
+
 
 class LoginDialog(QDialog): #米家账号登陆
     def __init__(self, parent=None):
@@ -111,10 +148,11 @@ class LoginDialog(QDialog): #米家账号登陆
                 QApplication.processEvents()
 
                 # 二维码登录
-                login_obj = mijiaLogin(save_path=self.auth_path)
+                login_obj = _mijiaLogin(save_path=self.auth_path)
                 auth_data = login_obj.QRlogin()
 
                 self.status_label.setText("二维码登录成功!")
+                plt.close()
                 self.accept()
                 return auth_data
             else:
@@ -130,10 +168,11 @@ class LoginDialog(QDialog): #米家账号登陆
                 QApplication.processEvents()
 
                 # 账号密码登录
-                login_obj = mijiaLogin(save_path=self.auth_path)
+                login_obj = _mijiaLogin(save_path=self.auth_path)
                 auth_data = login_obj.login(username, password)
 
                 self.status_label.setText("登录成功!")
+                plt.close()
                 self.accept()
                 return auth_data
         except Exception as e:
@@ -285,6 +324,12 @@ class BubbleWidget(QWidget):#状态圆形类
 
         # 功能选项
         options_group = QGroupBox("可执行操作")
+        options_group.setStyleSheet("""
+            QGroupBox {
+                padding: 20px;  /* 内边距 */
+                margin: 5px;    /* 外边距 */
+            }
+        """)
         options_layout = QVBoxLayout()
 
         # 创建一个滚动区域以容纳更多控件

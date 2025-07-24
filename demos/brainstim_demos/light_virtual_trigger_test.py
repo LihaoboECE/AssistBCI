@@ -5,28 +5,28 @@ from metabci.utils.sharedmemory import SharedDict
 
 if __name__ == "__main__":
 
-    # #光电管测试
-    # LT = Light_trigger(lsl_source_id="trigger", w=1920, h=1080)
-    # LT.start()
-    # LT.setData(0) #启动打标
-    # time.sleep(1)
-    #
-    # streams = resolve_byprop("source_id", "trigger", timeout=1)
-    # inlet = StreamInlet(streams[0])
-    # inlet.pull_sample(timeout=0)
-    #
-    # time.sleep(1)
-    #
-    # # 打标
-    # for i in range(10):
-    #     time.sleep(0.5)
-    #     LT.setData(i+1)
-    #     samples, timestamp = inlet.pull_sample(timeout=1)
-    #     print("Event: ", samples, "Timestamp: ", timestamp)
-    #     #此处在设备中进行光电trigger event的替换
-    #
-    # # 安全退出
-    # LT.setData(-1)
+    #光电管测试
+    LT = Light_trigger(lsl_source_id="trigger", w=1920, h=1080)
+    LT.start()
+    LT.setData(0) #启动打标
+    time.sleep(1)
+
+    streams = resolve_byprop("source_id", "trigger", timeout=1)
+    inlet = StreamInlet(streams[0])
+    inlet.pull_sample(timeout=0)
+
+    time.sleep(1)
+
+    # 打标
+    for i in range(10):
+        time.sleep(0.5)
+        LT.setData(i+1)
+        samples, timestamp = inlet.pull_sample(timeout=1)
+        print("Event: ", samples, "Timestamp: ", timestamp)
+        #此处在设备中进行光电trigger event的替换
+
+    # 安全退出
+    LT.setData(-1)
 
 
     #虚拟打标测试
