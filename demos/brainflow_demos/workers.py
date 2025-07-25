@@ -135,7 +135,7 @@ class ConditionWorker(ProcessWorker):
 
             new, labels, report = self.gmm.predict(x)
             new, labels, report = new[0], labels[0], report[0] # predict for one sample
-            new = True
+            # new = True
 
             if new:
                 # 维护固定大小的临时缓存
